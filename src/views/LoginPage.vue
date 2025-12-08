@@ -99,7 +99,7 @@ async function handleLogin() {
     formData.append("phone", phone.value);
     formData.append("password", password.value);
     formData.append("selfie", selfieBlob, "selfie.jpg");
-    formData.append("deviceInfo", String(deviceId));
+    formData.append("device_id", String(deviceId));
 
     if (isFreelancer.value === "yes") {
       formData.append("shift", shift.value.toString());
