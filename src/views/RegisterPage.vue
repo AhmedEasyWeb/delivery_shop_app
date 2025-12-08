@@ -7,17 +7,25 @@ import api from "@/api/axios";
 import { toast } from "vue-sonner";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { Device } from "@capacitor/device";
 
 const loading = ref(false);
 const cities = ref<{ city_id: number; city_name: string }[]>([]);
 const router = useRouter();
 const authStore = useAuthStore();
 
+async function getDeviceId() {
+  const info = await Device.getId();
+  toast.info(`Device UUID: ${JSON.stringify(info)}`);
+  return info.identifier;
+}
+
 type DriverForm = {
   full_name: string;
   phone: string;
   city: string;
   id_number: string;
+  device_id: string;
   driver_type: string;
   plate_number: string;
   password: string;
@@ -25,19 +33,26 @@ type DriverForm = {
   second_license_photo: File | null;
   third_license_photo: File | null;
   fourth_license_photo: File | null;
+  fifth_license_photo: File | null;
+  sixth_license_photo: File | null;
+  seventh_license_photo: File | null;
 };
 
 type PhotoField =
   | "first_license_photo"
   | "second_license_photo"
   | "third_license_photo"
-  | "fourth_license_photo";
+  | "fourth_license_photo"
+  | "fifth_license_photo"
+  | "sixth_license_photo"
+  | "seventh_license_photo";
 
 const form = ref<DriverForm>({
   full_name: "",
   phone: "",
   city: "",
   id_number: "",
+  device_id: "",
   driver_type: "",
   plate_number: "",
   password: "",
@@ -45,6 +60,9 @@ const form = ref<DriverForm>({
   second_license_photo: null as File | null,
   third_license_photo: null as File | null,
   fourth_license_photo: null as File | null,
+  fifth_license_photo: null as File | null,
+  sixth_license_photo: null as File | null,
+  seventh_license_photo: null as File | null,
 });
 
 async function fetchCities() {
@@ -63,6 +81,7 @@ const handleFile = (e: Event, field: PhotoField) => {
 
 const handleSubmit = async () => {
   loading.value = true;
+  const deviceId = await getDeviceId();
 
   try {
     const fd = new FormData();
@@ -86,11 +105,16 @@ const handleSubmit = async () => {
       fd.append(map[key] || key, value);
     }
 
+    fd.append("device_id", deviceId);
+
     const photos: PhotoField[] = [
       "first_license_photo",
       "second_license_photo",
       "third_license_photo",
       "fourth_license_photo",
+      "fifth_license_photo",
+      "sixth_license_photo",
+      "seventh_license_photo",
     ];
 
     for (const p of photos) {
@@ -210,7 +234,7 @@ onMounted(async () => {
 
       <div class="grid grid-cols-2 gap-4">
         <div class="space-y-1">
-          <Label>الصورة 1</Label>
+          <Label>صورة البطاقه الشخصية (1)</Label>
           <input
             type="file"
             required
@@ -219,8 +243,8 @@ onMounted(async () => {
           />
         </div>
 
-        <div v-if="form.driver_type !== 'عجلة'" class="space-y-1">
-          <Label>الصورة 2</Label>
+        <div class="space-y-1">
+          <Label>صورة البطاقه الشخصية (2)</Label>
           <input
             type="file"
             required
@@ -230,7 +254,7 @@ onMounted(async () => {
         </div>
 
         <div v-if="form.driver_type !== 'عجلة'" class="space-y-1">
-          <Label>الصورة 3</Label>
+          <Label>صورة الرخصة (1)</Label>
           <input
             type="file"
             required
@@ -240,7 +264,7 @@ onMounted(async () => {
         </div>
 
         <div v-if="form.driver_type !== 'عجلة'" class="space-y-1">
-          <Label>الصورة 4</Label>
+          <Label>صورة الرخصة (2)</Label>
           <input
             type="file"
             required
@@ -249,6 +273,35 @@ onMounted(async () => {
           />
         </div>
       </div>
+    </div>
+    <div v-if="form.driver_type !== 'عجلة'" class="space-y-1">
+      <Label>صورة المكنه (1)</Label>
+      <input
+        type="file"
+        required
+        class="w-full border border-border rounded-md px-3 py-2 text-sm"
+        @change="(e) => handleFile(e, 'fifth_license_photo')"
+      />
+    </div>
+
+    <div v-if="form.driver_type !== 'عجلة'" class="space-y-1">
+      <Label>صورة المكنه (2)</Label>
+      <input
+        type="file"
+        required
+        class="w-full border border-border rounded-md px-3 py-2 text-sm"
+        @change="(e) => handleFile(e, 'sixth_license_photo')"
+      />
+    </div>
+
+    <div v-if="form.driver_type !== 'عجلة'" class="space-y-1">
+      <Label>صورة شخصية</Label>
+      <input
+        type="file"
+        required
+        class="w-full border border-border rounded-md px-3 py-2 text-sm"
+        @change="(e) => handleFile(e, 'seventh_license_photo')"
+      />
     </div>
 
     <Button

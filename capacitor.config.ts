@@ -6,7 +6,6 @@ const config: CapacitorConfig = {
   webDir: "dist",
   server: {
     cleartext: true,
-    url: "http://192.168.1.90:5173",
   },
   android: {
     allowMixedContent: true,

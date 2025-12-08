@@ -39,8 +39,8 @@ const error = computed(() => authStore.error);
 
 async function getDeviceId() {
   const info = await Device.getId();
-  toast.info(`Device UUID: ${info}`);
-  return info;
+  toast.info(`Device UUID: ${JSON.stringify(info)}`);
+  return info.identifier;
 }
 
 onMounted(async () => {

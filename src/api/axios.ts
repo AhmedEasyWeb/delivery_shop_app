@@ -2,7 +2,7 @@ import { getLocalData } from "@/utils/localStorage";
 import axios from "axios";
 
 export const baseUrl = "https://deliveryshop.cloud/api";
-// export const baseUrl = "http://localhost:8080/api";
+// export const baseUrl = "http://192.168.1.90:8080/api";
 
 const api = axios.create({
   baseURL: baseUrl,
