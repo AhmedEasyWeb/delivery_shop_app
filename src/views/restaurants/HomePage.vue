@@ -2,7 +2,7 @@
 import EditOrders from "@/components/EditOrders.vue";
 import { computed, onMounted, ref, watch } from "vue";
 import { Clock, CheckCircle } from "lucide-vue-next";
-import Header from "@/components/RestaurantsHeader.vue";
+import RestaurantsHeader from "@/components/RestaurantsHeader.vue";
 import OrderCard from "@/components/OrderCard.vue";
 import {
   Card,
@@ -12,46 +12,42 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { useWebRestaurantSocket } from "@/composables/useWebSocket";
-
+import api from "@/api/axios";
 import type { Order } from "@/types";
 import { useAuthStore } from "@/stores/auth";
 import { toast } from "vue-sonner";
 import CustomPagination from "@/components/CustomPagination.vue";
-import { httpRequest } from "@/utils/http";
+import { useOrderTimers } from "@/composables/useOrderTimer";
 
 const auth = useAuthStore();
-
-const orders = ref<Order[]>([]);
-const waitingOrders = ref<Order[]>([]);
 const completedToday = ref(0);
-const status = ref<any>({});
+const waitingOrders = ref<Order[]>([]);
+const orders = ref<Order[]>([]);
 const loading = ref(false);
 const error = ref("");
+const editDialogOpen = ref(false);
+const selectedOrder = ref<Order>({} as Order);
+const status = ref<any>({});
+
+const { messages, sendMessage } = useWebRestaurantSocket(auth.user?.id || 0);
 
 const currentPage = ref(1);
 const itemsPerPage = ref(50);
+
 const totalPages = computed(() =>
-  Math.ceil(status.value.sum_of_orders / itemsPerPage.value)
+  Math.ceil(status.value.sum_of_orders / itemsPerPage.value),
 );
-
-const editDialogOpen = ref(false);
-const selectedOrder = ref<Order>({} as Order);
-
-let socket: ReturnType<typeof useWebRestaurantSocket> | null = null;
 
 const fetchTodayOrders = async () => {
   loading.value = true;
-  const today = new Date().toISOString().split("T")[0];
+  const date = new Date();
+  const today = date.toISOString().split("T")[0];
 
   try {
-    const res = await httpRequest<{ orders: Order[] }>({
-      url: `/api/orders?from=${today}&to=${today}`,
-      method: "GET",
-    });
-    orders.value = res.orders;
+    const res = await api.get(`/orders?from=${today}&to=${today}`);
+    orders.value = res.data.orders;
   } catch (err: any) {
-    toast.error("فشل في جلب طلبات اليوم: " + (err.message || "خطأ غير معروف"));
-    error.value = err.message || "Failed to fetch orders";
+    error.value = err.message || "Failed to fetch restaurants";
   } finally {
     loading.value = false;
   }
@@ -59,41 +55,35 @@ const fetchTodayOrders = async () => {
 
 const fetchStats = async () => {
   loading.value = true;
-  const today = new Date().toISOString().split("T")[0];
+  const date = new Date();
+  const today = date.toISOString().split("T")[0];
 
   try {
-    const res = await httpRequest<{ stats: any }>({
-      url: `/api/orders?from=${today}&to=${today}&status=true&page=${currentPage.value}`,
-      method: "GET",
-    });
-    status.value = res.stats || {};
+    const res = await api.get(
+      `/orders?from=${today}&to=${today}&status=true&page=${currentPage.value}`,
+    );
+    status.value = res.data.stats || {};
+    console.log("Status:", res.data.stats);
   } catch (err: any) {
-    toast.error("فشل في جلب الإحصائيات: " + (err.message || "خطأ غير معروف"));
     console.error("Failed to fetch stats:", err);
   } finally {
     loading.value = false;
   }
 };
 
-watch(
-  () => auth.user,
-  (user) => {
-    if (user?.id) {
-      console.log(`Initializing WebSocket for restaurant ID: ${user.id}`);
-      socket = useWebRestaurantSocket(user.id, user.location);
-    }
-  },
-  { immediate: true }
-);
+const { startTimers } = useOrderTimers(orders, sendMessage);
+
+onMounted(async () => {
+  await fetchTodayOrders();
+  await fetchStats();
+  startTimers();
+});
 
 watch(
-  () => socket?.messages.value,
+  messages,
   (newMessages) => {
-    if (!newMessages?.length) return;
     const last = newMessages[newMessages.length - 1];
     if (!last) return;
-
-    console.log("WebSocket message received:", last);
 
     if (last.type === "new_order") {
       toast.success("تم انشاء طلب جديد!");
@@ -101,45 +91,44 @@ watch(
     }
 
     if (last.type === "updated_order") {
-      orders.value = orders.value.map((order) =>
-        order.order_id === last.order.order_id
-          ? Object.assign(order, last.order)
-          : order
-      );
+      orders.value = orders.value.map((order) => {
+        if (order.order_id === last.order.order_id) {
+          console.log("Updating order:", last.order, order);
+          order = last.order;
+        }
+        return order;
+      });
     }
 
     if (last.type === "order_status_updated") {
-      orders.value = orders.value.map((order) =>
-        order.order_id === last.order.order_id
-          ? { ...order, order_status: last.order.order_status }
-          : order
-      );
+      console.log("Order status updated:", last.order);
+      orders.value = orders.value.map((order) => {
+        if (order.order_id === last.order.order_id) {
+          order.order_status = last.order.order_status;
+        }
+        return order;
+      });
     }
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 
 watch(
   orders,
   (newOrders) => {
     waitingOrders.value = newOrders.filter(
-      (order) => order.order_status !== "delivered"
+      (order: any) => order.order_status !== "delivered",
     );
 
     completedToday.value = newOrders.filter(
-      (order) => order.order_status === "delivered"
+      (order: any) => order.order_status === "delivered",
     ).length;
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
-
-onMounted(() => {
-  fetchTodayOrders();
-  fetchStats();
-});
 </script>
 <template>
-  <Header />
+  <RestaurantsHeader />
   <div class="p-6" dir="rtl">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       <Card>

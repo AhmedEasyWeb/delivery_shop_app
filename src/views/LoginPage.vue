@@ -1,13 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,11 +9,21 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  SelectLabel,
 } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, Loader } from "lucide-vue-next";
+import {
+  ArrowRight,
+  ChevronRight,
+  Loader2,
+  Camera,
+  Smartphone,
+  UserCircle,
+} from "lucide-vue-next";
 import { useRouter } from "vue-router";
-import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
+import {
+  Camera as CapCamera,
+  CameraResultType,
+  CameraSource,
+} from "@capacitor/camera";
 import { useAuthStore } from "@/stores/auth";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "vue-sonner";
@@ -35,11 +38,9 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const router = useRouter();
 const authStore = useAuthStore();
 const loading = computed(() => authStore.isLoading);
-const error = computed(() => authStore.error);
 
 async function getDeviceId() {
   const info = await Device.getId();
-  toast.info(`Device UUID: ${JSON.stringify(info)}`);
   return info.identifier;
 }
 
@@ -48,11 +49,9 @@ onMounted(async () => {
   await authStore.checkRestaurantSession();
 
   if (authStore.isAuthenticated) {
-    if (authStore.type === "driver") {
-      router.push("/driver-panel");
-    } else if (authStore.type === "restaurant") {
+    if (authStore.type === "driver") router.push("/driver-panel");
+    else if (authStore.type === "restaurant")
       router.push("/restaurant/dashboard");
-    }
   }
 });
 
@@ -62,22 +61,18 @@ async function handleLogin() {
 
     if (Capacitor.getPlatform() === "web") {
       fileInput.value?.click();
-
       const file = await new Promise<File | null>((resolve) => {
-        fileInput.value!.onchange = () => {
+        fileInput.value!.onchange = () =>
           resolve(fileInput.value!.files?.[0] || null);
-        };
       });
-
       if (!file) {
-        toast.error("لازم تختار صورة علشان تسجل الدخول.");
+        toast.error("لازم تختار صورة للسيلفي");
         return;
       }
-
       selfieBlob = file;
     } else {
-      const photo = await Camera.getPhoto({
-        quality: 40,
+      const photo = await CapCamera.getPhoto({
+        quality: 50,
         resultType: CameraResultType.Uri,
         allowEditing: false,
         source: CameraSource.Camera,
@@ -85,7 +80,7 @@ async function handleLogin() {
       });
 
       if (!photo.path) {
-        alert("لازم تاخد سيلفي علشان تسجل الدخول.");
+        toast.error("لازم تاخد سيلفي علشان تسجل الدخول.");
         return;
       }
 
@@ -94,13 +89,12 @@ async function handleLogin() {
     }
 
     const deviceId = await getDeviceId();
-
     const formData = new FormData();
     formData.append("phone", phone.value);
     formData.append("password", password.value);
-    formData.append("selfie", selfieBlob, "selfie.jpg");
+    formData.append("selfie", selfieBlob!, "selfie.jpg");
     formData.append("device_id", String(deviceId));
-
+    formData.append("is_freelancer", isFreelancer.value === "yes" ? "1" : "0");
     if (isFreelancer.value === "yes") {
       formData.append("shift", shift.value.toString());
       formData.append("is_freelancer", "1");
@@ -109,115 +103,165 @@ async function handleLogin() {
     }
 
     const success = await authStore.login(formData);
-
-    if (success) {
-      router.push("/driver-panel");
-    } else {
-      alert(authStore.error || "فشل تسجيل الدخول. تأكد من البيانات والسيلفي.");
-    }
+    if (success) router.push("/driver-panel");
   } catch (err) {
-    console.error("Login error:", err);
-    toast.error(error);
+    toast.error("حدث خطأ أثناء تسجيل الدخول");
   }
-}
-
-function goToRegister() {
-  router.push("/register");
 }
 </script>
 
 <template>
-  <div
-    class="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4 mt-2"
-  >
-    <router-link
-      to="/landing"
-      class="flex items-center gap-2 text-black mb-2 text-lg md:text-2xl absolute top-4 left-4 hover:underline"
+  <div class="min-h-screen bg-white flex flex-col font-sans" dir="rtl">
+    <div
+      class="p-4 flex items-center justify-between bg-white border-b border-slate-50 sticky top-0 z-10"
     >
-      <ArrowLeft class="w-4 h-4 md:w-6 md:h-6" />
-      <p>الصفحة الرئيسية</p>
-    </router-link>
-    <router-link
-      to="/restaurant"
-      class="flex items-center gap-2 text-black mb-2 text-lg md:text-2xl absolute top-4 right-4 hover:underline"
-    >
-      <p>المطعم</p>
-      <ArrowRight class="w-4 h-4 md:w-6 md:h-6" />
-    </router-link>
+      <Button
+        variant="ghost"
+        size="icon"
+        @click="router.push('/landing')"
+        class="rounded-full"
+      >
+        <ArrowRight class="w-6 h-6 text-slate-800" />
+      </Button>
+      <h1 class="font-black text-lg text-slate-900">دخول الطيارين</h1>
+      <Button
+        variant="ghost"
+        size="sm"
+        @click="router.push('/restaurant')"
+        class="text-red-600 font-bold"
+      >
+        المطاعم
+      </Button>
+    </div>
 
-    <Card class="w-full max-w-md">
-      <CardHeader class="text-center">
-        <CardTitle class="text-2xl font-bold">تسجيل الدخول الطيار</CardTitle>
-        <CardDescription>
-          اكتب بياناتك وخد سيلفي علشان تدخل على لوحة السواقين
-        </CardDescription>
-      </CardHeader>
+    <div class="px-6 pt-10 pb-6">
+      <div
+        class="bg-red-50 w-16 h-16 rounded-[22px] flex items-center justify-center mb-6"
+      >
+        <Smartphone class="w-8 h-8 text-red-600" />
+      </div>
+      <h2 class="text-3xl font-black text-slate-900 mb-2">أهلاً بك مجدداً</h2>
+      <p class="text-slate-500 font-medium leading-relaxed">
+        سجل دخولك وابدأ رحلة التوصيل. سيُطلب منك أخذ صورة سيلفي سريعة للتأكد من
+        هويتك.
+      </p>
+    </div>
 
-      <CardContent>
-        <form @submit.prevent="handleLogin" class="space-y-4">
-          <div class="grid gap-2">
-            <Label for="phone">رقم الهاتف</Label>
+    <div class="flex-1 px-6 space-y-6">
+      <form @submit.prevent="handleLogin" class="space-y-5">
+        <div class="space-y-1.5">
+          <Label for="phone" class="mr-2 text-slate-700 font-bold text-sm"
+            >رقم الهاتف</Label
+          >
+          <div class="relative">
             <Input
               id="phone"
-              type="text"
-              placeholder="اكتب رقم الهاتف"
+              type="tel"
               v-model="phone"
-              required
+              placeholder="07xx xxx xxxx"
+              class="h-14 rounded-2xl bg-slate-50 border-none px-5 text-lg font-bold focus-visible:ring-red-500 transition-all"
             />
           </div>
-          <input type="file" accept="image/*" ref="fileInput" class="hidden" />
-          <div class="grid gap-2">
-            <Label>نوع السائق</Label>
-            <Select v-model="isFreelancer">
-              <SelectTrigger class="w-full">
-                <SelectValue placeholder="اختار النوع" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="no">سائق عادي (شيفت ثابت)</SelectItem>
-                <SelectItem value="yes">مستقل (يحدد الوردية)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        </div>
 
-          <div v-if="isFreelancer === 'yes'" class="grid gap-2">
-            <Label for="shift">الوردية</Label>
-            <Select v-model="shift">
-              <SelectTrigger class="w-full">
-                <SelectValue placeholder="اختار الوردية" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectLabel class="text-gray-400">الوردية</SelectLabel>
-                <SelectItem :value="8">وردية ٨ ساعات</SelectItem>
-                <SelectItem :value="10">وردية ١٠ ساعات</SelectItem>
-                <SelectItem :value="12">وردية ١٢ ساعة</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div class="space-y-1.5">
+          <Label class="mr-2 text-slate-700 font-bold text-sm">نوع العمل</Label>
+          <Select v-model="isFreelancer">
+            <SelectTrigger
+              class="h-14 rounded-2xl bg-slate-50 border-none px-5 text-right font-bold text-slate-800 focus:ring-red-500"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent class="rounded-2xl border-none shadow-xl">
+              <SelectItem value="no" class="p-3 font-bold"
+                >سائق (شيفت ثابت)</SelectItem
+              >
+              <SelectItem value="yes" class="p-3 font-bold"
+                >مستقل (فريلانسر)</SelectItem
+              >
+            </SelectContent>
+          </Select>
+        </div>
 
-          <div class="grid gap-2">
-            <Label for="password">كلمة السر</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              v-model="password"
-              required
-            />
-          </div>
+        <div
+          v-if="isFreelancer === 'yes'"
+          class="space-y-1.5 animate-in fade-in slide-in-from-top-2"
+        >
+          <Label class="mr-2 text-slate-700 font-bold text-sm"
+            >مدة الوردية</Label
+          >
+          <Select v-model="shift">
+            <SelectTrigger
+              class="h-14 rounded-2xl bg-slate-100 border-none px-5 text-right font-bold"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent class="rounded-2xl">
+              <SelectItem :value="8" class="font-bold">8 ساعات</SelectItem>
+              <SelectItem :value="10" class="font-bold">10 ساعات</SelectItem>
+              <SelectItem :value="12" class="font-bold">12 ساعة</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-          <Button type="submit" class="w-full" :disabled="loading">
-            <Loader v-if="loading" class="w-4 h-4 animate-spin" />
-            <span>تسجيل الدخول</span>
-          </Button>
-        </form>
+        <div class="space-y-1.5">
+          <Label for="password" class="mr-2 text-slate-700 font-bold text-sm"
+            >كلمة السر</Label
+          >
+          <Input
+            id="password"
+            type="password"
+            v-model="password"
+            placeholder="••••••••"
+            class="h-14 rounded-2xl bg-slate-50 border-none px-5 text-lg focus-visible:ring-red-500"
+          />
+        </div>
 
-        <div class="mt-4 text-center text-sm">
-          معندكش حساب؟
-          <Button variant="link" @click="goToRegister" class="p-0 h-auto">
-            سجل دلوقتي
+        <input type="file" accept="image/*" ref="fileInput" class="hidden" />
+
+        <div class="pt-4">
+          <Button
+            type="submit"
+            class="w-full h-15 rounded-[22px] bg-red-600 hover:bg-red-700 text-white text-xl font-black shadow-lg shadow-red-100 active:scale-[0.98] transition-all py-7"
+            :disabled="loading"
+          >
+            <template v-if="loading">
+              <Loader2 class="w-6 h-6 animate-spin mr-2" />
+              جاري الدخول...
+            </template>
+            <template v-else>
+              دخول واستلام الصورة
+              <Camera class="mr-2 w-5 h-5" />
+            </template>
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </form>
+
+      <div class="pb-10">
+        <button
+          @click="router.push('/register')"
+          class="w-full flex items-center justify-between p-5 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors group"
+        >
+          <div class="flex items-center gap-4">
+            <div class="bg-white p-2 rounded-xl shadow-sm">
+              <UserCircle class="w-6 h-6 text-slate-600" />
+            </div>
+            <div class="text-right">
+              <p class="font-black text-slate-900">ليس لديك حساب؟</p>
+              <p class="text-xs text-slate-500 font-bold">انضم لعائلتنا الآن</p>
+            </div>
+          </div>
+          <ChevronRight
+            class="w-5 h-5 text-slate-400 group-hover:-translate-x-1 transition-transform"
+          />
+        </button>
+      </div>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.h-15 {
+  height: 3.75rem;
+}
+</style>

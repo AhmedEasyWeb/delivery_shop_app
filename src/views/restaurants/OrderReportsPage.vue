@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import {
   Card,
   CardHeader,
@@ -7,16 +7,16 @@ import {
   CardContent,
   CardDescription,
 } from "@/components/ui/card";
-import Header from "@/components/RestaurantsHeader.vue";
+import RestaurantsHeader from "@/components/RestaurantsHeader.vue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Clock, Package, Truck, Loader2, CheckCircle } from "lucide-vue-next";
+import { Clock, Loader2, CheckCircle } from "lucide-vue-next";
 import { Badge } from "@/components/ui/badge";
+import api from "@/api/axios";
 import type { Order } from "@/types";
 import { toast } from "vue-sonner";
 import CustomPagination from "@/components/CustomPagination.vue";
-import { httpRequest } from "@/utils/http";
-import baseUrl from "@/utils/baseUrl";
+import { getStatusColor, getStatusIcon } from "@/lib/utils";
 
 const orders = ref<Order[]>([]);
 const loading = ref(false);
@@ -29,7 +29,7 @@ const currentPage = ref(1);
 const itemsPerPage = ref(50);
 
 const totalPages = computed(() =>
-  Math.ceil(status.value.sum_of_orders / itemsPerPage.value)
+  Math.ceil(status.value.sum_of_orders / itemsPerPage.value),
 );
 
 const fetchOrdersByDate = async () => {
@@ -39,14 +39,10 @@ const fetchOrdersByDate = async () => {
   }
   loading.value = true;
   try {
-    const res = await httpRequest<{ orders: Order[] }>({
-      url: `/api/orders?from=${fromDate.value}&to=${toDate.value}&page=${currentPage.value}`,
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    orders.value = res.orders || [];
+    const res = await api.get(
+      `/orders?from=${fromDate.value}&to=${toDate.value}&page=${currentPage.value}`,
+    );
+    orders.value = res.data.orders || [];
   } catch (err: any) {
     error.value = err.message || "فشل في جلب الطلبات";
     toast.error(error.value);
@@ -57,15 +53,11 @@ const fetchOrdersByDate = async () => {
 
 const fetchStats = async () => {
   try {
-    const res = await httpRequest<{ stats: any }>({
-      url: `/api/orders?from=${fromDate.value}&to=${toDate.value}&status=true&page=${currentPage.value}`,
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    status.value = res.stats || {};
-    console.log("Status:", res.stats);
+    const res = await api.get(
+      `/orders?from=${fromDate.value}&to=${toDate.value}&status=true&page=${currentPage.value}`,
+    );
+    status.value = res.data.stats || {};
+    console.log("Status:", res.data.stats);
   } catch (err: any) {
     console.error("Failed to fetch stats:", err);
   }
@@ -79,32 +71,6 @@ onMounted(async () => {
   await fetchStats();
 });
 
-function getStatusIcon(status: string) {
-  switch (status) {
-    case "preparing":
-      return h(Clock, { class: "h-4 w-4" });
-    case "ready":
-      return h(Package, { class: "h-4 w-4" });
-    case "picked-up":
-      return h(Truck, { class: "h-4 w-4" });
-    default:
-      return h(Clock, { class: "h-4 w-4" });
-  }
-}
-
-function getStatusColor(status: string) {
-  switch (status) {
-    case "preparing":
-      return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
-    case "ready":
-      return "bg-green-500/10 text-green-500 border-green-500/20";
-    case "picked-up":
-      return "bg-primary/10 text-primary border-primary/20";
-    default:
-      return "bg-gray-500/10 text-gray-500 border-gray-500/20";
-  }
-}
-
 watch(currentPage, async (newPage, oldPage) => {
   if (newPage !== oldPage) {
     await fetchOrdersByDate();
@@ -113,19 +79,19 @@ watch(currentPage, async (newPage, oldPage) => {
 </script>
 
 <template>
-  <Header />
+  <RestaurantsHeader />
 
   <div class="p-6 space-y-8" dir="rtl">
     <Card>
       <CardHeader>
         <CardTitle>بحث حسب التاريخ</CardTitle>
-        <CardDescription
-          >استعرض كل الطلبات بين التاريخين المحددين (صفحة {{ currentPage }} من
-          {{ totalPages }})</CardDescription
-        >
+        <CardDescription>
+          استعرض كل الطلبات بين التاريخين المحددين (صفحة {{ currentPage }} من
+          {{ totalPages }})
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <div class="flex flex-col md:flex-row gap-4 items-start">
+        <div class="flex flex-col md:flex-row gap-4 items-end">
           <div class="flex flex-col">
             <label class="text-sm font-medium mb-1">من تاريخ</label>
             <Input type="date" v-model="fromDate" />
@@ -179,20 +145,20 @@ watch(currentPage, async (newPage, oldPage) => {
     <Card>
       <CardHeader>
         <CardTitle>الطلبات</CardTitle>
-        <CardDescription
-          >استعرض كل الطلبات بين التاريخين المحددين</CardDescription
-        >
+        <CardDescription>
+          استعرض كل الطلبات بين التاريخين المحددين
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div class="space-y-4">
-          <template v-for="order in orders" :key="order.id">
+          <template v-for="order in orders" :key="order.order_id">
             <div class="border border-border rounded-lg p-4">
               <div class="flex items-start justify-between mb-4">
                 <div class="space-y-1">
                   <div class="flex items-center gap-2">
-                    <span class="font-bold text-primary"
-                      >#{{ order.order_id }}</span
-                    >
+                    <span class="font-bold text-primary">
+                      #{{ order.order_id }}
+                    </span>
                     <Badge :class="getStatusColor(order.order_status)">
                       <component
                         :is="getStatusIcon(order.order_status)"
@@ -215,7 +181,7 @@ watch(currentPage, async (newPage, oldPage) => {
               <div class="flex flex-wrap gap-4">
                 <img
                   v-if="order.order_receipt"
-                  :src="baseUrl + order.order_receipt"
+                  :src="'https://deliveryshop.cloud' + order.order_receipt"
                   alt="Receipt Image"
                   class="h-36 w-36 rounded-md object-cover"
                 />

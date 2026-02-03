@@ -146,170 +146,229 @@ onMounted(async () => {
 </script>
 
 <template>
-  <form
-    @submit.prevent
-    class="min-h-screen bg-background p-5 flex flex-col gap-6"
-  >
-    <h1 class="text-2xl font-bold text-foreground text-center">
-      إنشاء حساب سائق
-    </h1>
-
+  <div class="min-h-screen bg-slate-50 flex flex-col font-sans" dir="rtl">
     <div
-      class="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm"
+      class="p-4 flex items-center gap-4 bg-white border-b border-slate-100 sticky top-0 z-20"
     >
-      <h2 class="font-semibold text-foreground text-sm">المعلومات الشخصية</h2>
+      <Button
+        variant="ghost"
+        size="icon"
+        @click="router.back()"
+        class="rounded-full"
+      >
+        <ArrowRight class="w-6 h-6 text-slate-800" />
+      </Button>
+      <h1 class="text-xl font-black text-slate-900">حساب سائق جديد</h1>
+    </div>
 
-      <div class="space-y-1">
-        <Label>الاسم الكامل</Label>
-        <Input v-model="form.full_name" required />
-      </div>
+    <form @submit.prevent="handleSubmit" class="p-5 space-y-6 pb-24">
+      <div class="space-y-4">
+        <div class="flex items-center gap-2 mb-2 px-1">
+          <User class="w-5 h-5 text-red-600" />
+          <h2 class="font-black text-slate-800">المعلومات الشخصية</h2>
+        </div>
 
-      <div class="space-y-1">
-        <Label>رقم الهاتف</Label>
-        <Input v-model="form.phone" required type="tel" />
-      </div>
-
-      <div class="space-y-1">
-        <Label>المدينة</Label>
-        <select
-          v-model="form.city"
-          required
-          class="w-full h-11 border border-border rounded-md px-3 bg-background text-sm"
+        <div
+          class="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-4"
         >
-          <option disabled value="">اختر مدينة</option>
-          <option v-for="city in cities" :key="city.city_id">
-            {{ city.city_name }}
-          </option>
-        </select>
+          <div class="space-y-1.5">
+            <Label class="text-slate-500 mr-1 text-xs font-bold"
+              >الاسم الكامل (كما في البطاقة)</Label
+            >
+            <Input
+              v-model="form.full_name"
+              required
+              class="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <Label class="text-slate-500 mr-1 text-xs font-bold"
+              >رقم الهاتف</Label
+            >
+            <Input
+              v-model="form.phone"
+              required
+              type="tel"
+              class="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold"
+              dir="ltr"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <Label class="text-slate-500 mr-1 text-xs font-bold">المدينة</Label>
+            <div class="relative">
+              <select
+                v-model="form.city"
+                required
+                class="w-full h-12 bg-slate-50 border-none rounded-xl px-4 font-bold text-sm appearance-none outline-none focus:ring-2 ring-red-500/20"
+              >
+                <option disabled value="">اختر مدينة</option>
+                <option
+                  v-for="city in cities"
+                  :key="city.city_id"
+                  :value="city.city_name"
+                >
+                  {{ city.city_name }}
+                </option>
+              </select>
+              <MapPin
+                class="absolute left-4 top-3.5 w-5 h-5 text-slate-400 pointer-events-none"
+              />
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <Label class="text-slate-500 mr-1 text-xs font-bold"
+              >الرقم القومي (14 رقم)</Label
+            >
+            <Input
+              v-model="form.id_number"
+              required
+              class="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold font-mono"
+            />
+          </div>
+        </div>
       </div>
 
-      <div class="space-y-1">
-        <Label>الرقم القومي</Label>
-        <Input v-model="form.id_number" required />
-      </div>
-    </div>
-
-    <div
-      class="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm"
-    >
-      <h2 class="font-semibold text-foreground text-sm">بيانات المركبة</h2>
-
-      <div class="space-y-1">
-        <Label>نوع السائق</Label>
-        <select
-          v-model="form.driver_type"
-          required
-          class="w-full h-11 border border-border rounded-md px-3 bg-background text-sm"
+      <div class="space-y-4">
+        <div class="flex items-center gap-2 mb-2 px-1">
+          <Bike class="w-5 h-5 text-blue-600" />
+          <h2 class="font-black text-slate-800">بيانات المركبة</h2>
+        </div>
+        <div
+          class="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-4"
         >
-          <option disabled value="">اختر نوع السائق</option>
-          <option value="موتوسيكل">موتوسيكل</option>
-          <option value="عجلة">عجلة</option>
-          <option value="سيارة">سيارة</option>
-        </select>
+          <div class="space-y-1.5">
+            <Label class="text-slate-500 mr-1 text-xs font-bold"
+              >نوع المركبة</Label
+            >
+            <select
+              v-model="form.driver_type"
+              required
+              class="w-full h-12 bg-slate-50 border-none rounded-xl px-4 font-bold text-sm"
+            >
+              <option disabled value="">اختر نوع المركبة</option>
+              <option value="موتوسيكل">موتوسيكل</option>
+              <option value="عجلة">عجلة</option>
+              <option value="سيارة">سيارة</option>
+            </select>
+          </div>
+          <div class="space-y-1.5">
+            <Label class="text-slate-500 mr-1 text-xs font-bold"
+              >رقم اللوحة</Label
+            >
+            <Input
+              v-model="form.plate_number"
+              required
+              placeholder="أ ب ج 1 2 3"
+              class="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold text-center"
+            />
+          </div>
+        </div>
       </div>
 
-      <div class="space-y-1">
-        <Label>رقم اللوحة</Label>
-        <Input v-model="form.plate_number" required class="font-mono" />
-      </div>
-    </div>
-
-    <div
-      class="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm"
-    >
-      <h2 class="font-semibold text-foreground text-sm">
-        البيانات الخاصة بالحساب
-      </h2>
-
-      <div class="space-y-1">
-        <Label>كلمة المرور</Label>
-        <Input v-model="form.password" required type="password" />
-      </div>
-    </div>
-
-    <div
-      class="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm"
-    >
-      <h2 class="font-semibold text-foreground text-sm">صور الرخص</h2>
-
-      <div class="grid grid-cols-2 gap-4">
-        <div class="space-y-1">
-          <Label>صورة البطاقه الشخصية (1)</Label>
-          <input
-            type="file"
-            required
-            class="w-full border border-border rounded-md px-3 py-2 text-sm"
-            @change="(e) => handleFile(e, 'first_license_photo')"
-          />
+      <div class="space-y-4">
+        <div class="flex items-center gap-2 mb-2 px-1">
+          <Lock class="w-5 h-5 text-emerald-600" />
+          <h2 class="font-black text-slate-800">أمان الحساب</h2>
         </div>
-
-        <div class="space-y-1">
-          <Label>صورة البطاقه الشخصية (2)</Label>
-          <input
-            type="file"
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+          <Label class="text-slate-500 mr-1 text-xs font-bold"
+            >كلمة المرور</Label
+          >
+          <Input
+            v-model="form.password"
             required
-            class="w-full border border-border rounded-md px-3 py-2 text-sm"
-            @change="(e) => handleFile(e, 'second_license_photo')"
-          />
-        </div>
-
-        <div v-if="form.driver_type !== 'عجلة'" class="space-y-1">
-          <Label>صورة الرخصة (1)</Label>
-          <input
-            type="file"
-            required
-            class="w-full border border-border rounded-md px-3 py-2 text-sm"
-            @change="(e) => handleFile(e, 'third_license_photo')"
-          />
-        </div>
-
-        <div v-if="form.driver_type !== 'عجلة'" class="space-y-1">
-          <Label>صورة الرخصة (2)</Label>
-          <input
-            type="file"
-            required
-            class="w-full border border-border rounded-md px-3 py-2 text-sm"
-            @change="(e) => handleFile(e, 'fourth_license_photo')"
+            type="password"
+            class="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold"
           />
         </div>
       </div>
-    </div>
-    <div v-if="form.driver_type !== 'عجلة'" class="space-y-1">
-      <Label>صورة المكنه (1)</Label>
-      <input
-        type="file"
-        required
-        class="w-full border border-border rounded-md px-3 py-2 text-sm"
-        @change="(e) => handleFile(e, 'fifth_license_photo')"
-      />
-    </div>
 
-    <div v-if="form.driver_type !== 'عجلة'" class="space-y-1">
-      <Label>صورة المكنه (2)</Label>
-      <input
-        type="file"
-        required
-        class="w-full border border-border rounded-md px-3 py-2 text-sm"
-        @change="(e) => handleFile(e, 'sixth_license_photo')"
-      />
-    </div>
+      <div class="space-y-4">
+        <div class="flex items-center gap-2 mb-2 px-1">
+          <Camera class="w-5 h-5 text-purple-600" />
+          <h2 class="font-black text-slate-800">رفع المستندات والطلب</h2>
+        </div>
 
-    <div v-if="form.driver_type !== 'عجلة'" class="space-y-1">
-      <Label>صورة شخصية</Label>
-      <input
-        type="file"
-        required
-        class="w-full border border-border rounded-md px-3 py-2 text-sm"
-        @change="(e) => handleFile(e, 'seventh_license_photo')"
-      />
-    </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div
+            v-for="(label, key) in {
+              first_license_photo: 'البطاقة (أمام)',
+              second_license_photo: 'البطاقة (خلف)',
+              third_license_photo: 'الرخصة (أمام)',
+              fourth_license_photo: 'الرخصة (خلف)',
+              fifth_license_photo: 'المركبة (1)',
+              sixth_license_photo: 'المركبة (2)',
+              seventh_license_photo: 'صورة شخصية',
+            }"
+            :key="key"
+          >
+            <label
+              v-if="
+                !(
+                  form.driver_type === 'عجلة' &&
+                  key.includes('license') &&
+                  !key.includes('first') &&
+                  !key.includes('second')
+                )
+              "
+              class="relative flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-4 transition-all active:scale-95"
+              :class="
+                form[key as PhotoField]
+                  ? 'border-emerald-500 bg-emerald-50'
+                  : 'border-slate-200 bg-white'
+              "
+            >
+              <input
+                type="file"
+                class="hidden"
+                @change="(e) => handleFile(e, key as PhotoField)"
+                accept="image/*"
+              />
+              <div
+                v-if="form[key as PhotoField]"
+                class="flex flex-col items-center animate-in zoom-in-75"
+              >
+                <CheckCircle2 class="w-6 h-6 text-emerald-600 mb-1" />
+                <span
+                  class="text-[10px] font-black text-emerald-700 text-center leading-tight"
+                  >تم الرفع</span
+                >
+              </div>
+              <div v-else class="flex flex-col items-center text-slate-400">
+                <Upload class="w-6 h-6 mb-1 opacity-50" />
+                <span class="text-[10px] font-bold text-center leading-tight">{{
+                  label
+                }}</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
 
-    <Button
-      class="w-full h-11 text-sm font-bold"
-      :disabled="loading"
-      @click="handleSubmit"
-    >
-      {{ loading ? "جاري التسجيل..." : "تسجيل الحساب" }}
-    </Button>
-  </form>
+      <div
+        class="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-lg border-t border-slate-100 z-30"
+      >
+        <Button
+          type="submit"
+          class="w-full h-14 rounded-2xl bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200 text-lg font-black"
+          :disabled="loading"
+        >
+          <Loader2 v-if="loading" class="w-5 h-5 animate-spin ml-2" />
+          {{ loading ? "جاري الإرسال..." : "إرسال طلب الانضمام" }}
+        </Button>
+      </div>
+    </form>
+  </div>
 </template>
+
+<style scoped>
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 1rem center;
+  background-size: 1.2em;
+}
+</style>

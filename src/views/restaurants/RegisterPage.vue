@@ -69,6 +69,7 @@ const formData = ref({
   restaurant_name: "",
   restaurant_city: "",
   address: "",
+  phone: "",
   commercial_register: "",
   location: "",
   password: "",
@@ -102,7 +103,7 @@ async function handleRegister() {
     fd.append("restaurant_name", formData.value.restaurant_name);
     fd.append("restaurant_city", formData.value.restaurant_city);
     fd.append("address", formData.value.address);
-    fd.append("commercial_register", formData.value.commercial_register);
+    fd.append("phone", formData.value.phone);
     fd.append("location", formData.value.location);
     fd.append("password", formData.value.password);
     if (formData.value.logo) {
@@ -142,7 +143,7 @@ watch(
     if (logoPhotoPreview.value && oldFile) {
       URL.revokeObjectURL(logoPhotoPreview.value);
     }
-  }
+  },
 );
 </script>
 
@@ -215,6 +216,16 @@ watch(
               type="text"
               placeholder="123456789"
               v-model="formData.commercial_register"
+              required
+            />
+          </div>
+          <div class="grid gap-2">
+            <Label for="phone">رقم الهاتف</Label>
+            <Input
+              id="phone"
+              type="text"
+              placeholder="123456789"
+              v-model="formData.phone"
               required
             />
           </div>
