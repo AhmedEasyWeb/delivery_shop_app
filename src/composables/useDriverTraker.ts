@@ -7,6 +7,7 @@ import type {
   BackgroundGeolocationPlugin,
   Location,
 } from "@capacitor-community/background-geolocation";
+import { Geolocation } from "@capacitor/geolocation";
 import { registerPlugin } from "@capacitor/core";
 import { toast } from "vue-sonner";
 
@@ -148,6 +149,18 @@ export function useDriverTracker() {
 
   async function startGeolocation() {
     try {
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000,
+      });
+
+      lastLocation.value = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      };
+
+      console.log("📍 Got immediate location:", lastLocation.value);
+
       const result = await BackgroundGeolocation.addWatcher(
         {
           backgroundTitle: "تتبع السائق",
@@ -179,7 +192,7 @@ export function useDriverTracker() {
               type: "location_update",
               driver_id: authStore.driver?.driver_id,
               location: lastLocation.value,
-              driver_stationed_at: ordersStore.orders[0]?.restaurant_id ?? null,
+              driver_stationed_at: authStore.driver?.stationed_at ?? null,
               driver_orders: ordersStore.orders.map((order) => order.order_id),
               timestamp: Date.now(),
             }),
@@ -316,7 +329,7 @@ export function useDriverTracker() {
       driver_type: "driver",
       driver_city: driver?.driver_city,
       driver_status: "READY",
-      driver_stationed_at: ordersStore.orders[0]?.restaurant_id ?? null,
+      driver_stationed_at: authStore.driver?.stationed_at ?? null,
       driver_orders: ordersStore.orders.map((o) => o.order_id),
       timestamp: Date.now(),
     };
@@ -332,19 +345,23 @@ export function useDriverTracker() {
   function startHeartbeat() {
     stopHeartbeat();
 
-    pingInterval = setInterval(async () => {
+    pingInterval = setInterval(() => {
       if (ws && ws.readyState === WebSocket.OPEN) {
-        const location = await waitForLocation();
-        ws.send(
-          JSON.stringify({
-            type: "location_update",
-            driver_id: authStore.driver?.driver_id,
-            location: location,
-            driver_stationed_at: ordersStore.orders[0]?.restaurant_id ?? null,
-            driver_orders: ordersStore.orders.map((order) => order.order_id),
-            timestamp: Date.now(),
-          }),
-        );
+        if (lastLocation.value) {
+          ws.send(
+            JSON.stringify({
+              type: "location_update",
+              driver_id: authStore.driver?.driver_id,
+              location: lastLocation.value,
+              driver_stationed_at: authStore.driver?.stationed_at ?? null,
+              driver_orders: ordersStore.orders.map((order) => order.order_id),
+              timestamp: Date.now(),
+            }),
+          );
+          console.log("💓 HEARTBEAT SENT with location:", lastLocation.value);
+        } else {
+          console.log("⚠️ Heartbeat skipped - no location available yet");
+        }
       }
     }, 30000);
   }
@@ -354,25 +371,6 @@ export function useDriverTracker() {
       clearInterval(pingInterval);
       pingInterval = null;
     }
-  }
-
-  async function waitForLocation(): Promise<{ lat: number; lng: number }> {
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject("Location timeout"), 10000); // 10s timeout
-
-      if (lastLocation.value) {
-        clearTimeout(timeout);
-        return resolve(lastLocation.value);
-      }
-
-      const checkLocation = setInterval(() => {
-        if (lastLocation.value) {
-          clearInterval(checkLocation);
-          clearTimeout(timeout);
-          resolve(lastLocation.value);
-        }
-      }, 500);
-    });
   }
 
   async function goOnline() {
