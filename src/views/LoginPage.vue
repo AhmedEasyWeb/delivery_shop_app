@@ -95,12 +95,8 @@ async function handleLogin() {
     formData.append("selfie", selfieBlob!, "selfie.jpg");
     formData.append("device_id", String(deviceId));
     formData.append("is_freelancer", isFreelancer.value === "yes" ? "1" : "0");
-    if (isFreelancer.value === "yes") {
+    if (isFreelancer.value === "yes")
       formData.append("shift", shift.value.toString());
-      formData.append("is_freelancer", "1");
-    } else {
-      formData.append("is_freelancer", "0");
-    }
 
     const success = await authStore.login(formData);
     if (success) router.push("/driver-panel");
