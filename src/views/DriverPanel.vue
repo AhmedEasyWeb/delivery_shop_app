@@ -8,7 +8,6 @@ import { RefreshCw, Wifi, WifiOff, MapPin, Info } from "lucide-vue-next";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrderHistory from "@/components/OrderHistory.vue";
 import DriverTab from "@/components/DriverTab.vue";
-import { useOrdersStore } from "@/stores/orders";
 import {
   Select,
   SelectContent,

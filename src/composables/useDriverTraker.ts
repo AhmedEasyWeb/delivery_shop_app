@@ -11,7 +11,7 @@ import { registerPlugin } from "@capacitor/core";
 import { toast } from "vue-sonner";
 
 const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>(
-  "BackgroundGeolocation"
+  "BackgroundGeolocation",
 );
 
 const WS_URL = "wss://deliveryshop.cloud";
@@ -48,6 +48,7 @@ export function useDriverTracker() {
   let ws: WebSocket | null = null;
   let watcherId: string | null = null;
   let pingInterval: any = null;
+  let hasSentInitialLocation = false;
 
   async function requestPermissions() {
     const permResult = await LocalNotifications.requestPermissions();
@@ -94,7 +95,7 @@ export function useDriverTracker() {
           },
         ],
       }).catch((err) =>
-        alert(`❌ Notification failed:, ${JSON.stringify(err.message)}`)
+        alert(`❌ Notification failed:, ${JSON.stringify(err.message)}`),
       );
     }, 1000);
   }
@@ -117,7 +118,7 @@ export function useDriverTracker() {
           },
         ],
       }).catch((err) =>
-        alert(`❌ Notification failed:, ${JSON.stringify(err.message)}`)
+        alert(`❌ Notification failed:, ${JSON.stringify(err.message)}`),
       );
     }, 1000);
   }
@@ -167,23 +168,24 @@ export function useDriverTracker() {
             lng: location.longitude,
           };
 
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(
-              JSON.stringify({
-                type: "location_update",
-                driver_id: authStore.driver?.driver_id,
-                location: lastLocation.value,
-                driver_stationed_at:
-                  ordersStore.orders[0]?.restaurant_id ?? null,
-                driver_orders: ordersStore.orders.map(
-                  (order) => order.order_id
-                ),
-                timestamp: Date.now(),
-              })
-            );
-            console.log("📡 LIVE LOCATION SENT:", lastLocation.value);
+          if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+          if (!hasSentInitialLocation) {
+            hasSentInitialLocation = true;
           }
-        }
+
+          ws.send(
+            JSON.stringify({
+              type: "location_update",
+              driver_id: authStore.driver?.driver_id,
+              location: lastLocation.value,
+              driver_stationed_at: ordersStore.orders[0]?.restaurant_id ?? null,
+              driver_orders: ordersStore.orders.map((order) => order.order_id),
+              timestamp: Date.now(),
+            }),
+          );
+          console.log("📡 LIVE LOCATION SENT:", lastLocation.value);
+        },
       );
 
       watcherId = result;
@@ -212,8 +214,8 @@ export function useDriverTracker() {
     ws.onopen = () => {
       console.log("✅ WS connected");
       isConnected.value = true;
+      hasSentInitialLocation = false;
       sendInitialData();
-
       startHeartbeat();
     };
 
@@ -262,13 +264,6 @@ export function useDriverTracker() {
     };
   }
 
-  // function reconnectWebSocket() {
-  //   console.log("Attempting to reconnect...");
-  //   setTimeout(() => {
-  //     if (isOnline.value) connectWebSocket();
-  //   }, 5000);
-  // }
-
   const handleChangeCity = (newCity: string) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
@@ -277,7 +272,7 @@ export function useDriverTracker() {
         type: "change_city",
         driver_id: driver?.driver_id,
         driver_city: newCity,
-      })
+      }),
     );
 
     authStore.changeCity(newCity);
@@ -293,7 +288,7 @@ export function useDriverTracker() {
         driver_stationed_at: restaurant_id,
         driver_status: "PICKING_UP",
         order_id: order_id,
-      })
+      }),
     );
   }
 
@@ -307,15 +302,14 @@ export function useDriverTracker() {
         driver_stationed_at: ordersStore.orders[0]?.restaurant_id ?? null,
         driver_orders: ordersStore.orders.map((order) => order.order_id),
         driver_status: "READY",
-      })
+      }),
     );
   }
 
-  async function sendInitialData() {
+  function sendInitialData() {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    const location = await waitForLocation();
 
-    const data: Partial<DriverConnection> = {
+    const data: DriverConnection = {
       type: "driver_init",
       driver_id: driver?.driver_id,
       driver_name: driver?.driver_full_name,
@@ -323,15 +317,16 @@ export function useDriverTracker() {
       driver_city: driver?.driver_city,
       driver_status: "READY",
       driver_stationed_at: ordersStore.orders[0]?.restaurant_id ?? null,
-      driver_orders: ordersStore.orders.map((order) => order.order_id),
-      location,
+      driver_orders: ordersStore.orders.map((o) => o.order_id),
+      timestamp: Date.now(),
     };
 
-    if (location) {
-      Object.assign(data, { location });
+    if (lastLocation.value) {
+      data.location = lastLocation.value;
     }
 
     ws.send(JSON.stringify(data));
+    console.log("🚀 DRIVER INIT SENT", data);
   }
 
   function startHeartbeat() {
@@ -348,7 +343,7 @@ export function useDriverTracker() {
             driver_stationed_at: ordersStore.orders[0]?.restaurant_id ?? null,
             driver_orders: ordersStore.orders.map((order) => order.order_id),
             timestamp: Date.now(),
-          })
+          }),
         );
       }
     }, 30000);
@@ -391,6 +386,8 @@ export function useDriverTracker() {
 
   async function goOffline() {
     isOnline.value = false;
+    hasSentInitialLocation = false;
+
     if (ws) ws.close(1000, "Driver offline");
     ws = null;
     await stopForegroundService();
