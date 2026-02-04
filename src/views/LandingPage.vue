@@ -19,8 +19,9 @@ import {
   Heart,
 } from "lucide-vue-next";
 import { httpRequest } from "@/utils/http";
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { toast } from "vue-sonner";
+import api from "@/api/axios";
 
 const router = useRouter();
 
@@ -32,6 +33,27 @@ function goToHash(uri: string) {
 const name = ref("");
 const phone = ref("");
 const message = ref("");
+const currentBransh = ref(0);
+
+const cities = ref<{ city_id: number; city_name: string; branch_id: number }[]>(
+  [],
+);
+
+const numbers: { [key: number]: string[] } = {
+  0: ["01012003846", "01202777049"],
+  1: ["01044054458", "01202777049"],
+  2: ["01012003846", "01022969694"],
+};
+
+async function fetchCities() {
+  try {
+    const res = await api.get(`/cities`);
+    cities.value = res.data;
+    console.log(res.data);
+  } catch (err) {
+    toast.error("فشل تحميل المدن");
+  }
+}
 
 async function submitContact() {
   const res = await httpRequest<any>({
@@ -45,6 +67,10 @@ async function submitContact() {
     name.value = phone.value = message.value = "";
   }
 }
+
+onMounted(async () => {
+  fetchCities();
+});
 </script>
 
 <template>
@@ -370,16 +396,36 @@ async function submitContact() {
             <p class="text-slate-600 mb-8">
               هل لديك استفسار؟ فريقنا جاهز للرد عليك في أسرع وقت ممكن.
             </p>
+            <p class="text-slate-600 mb-8">اختر أقرب مدينة إليك للتواصل معنا</p>
 
             <div class="space-y-6">
-              <div class="flex items-center gap-4">
+              <select
+                v-model="currentBransh"
+                required
+                class="w-full h-12 bg-slate-50 border-none rounded-xl px-4 font-bold text-sm appearance-none outline-none focus:ring-2 ring-red-500/20"
+              >
+                <option disabled :value="0">اختر مدينة</option>
+                <option
+                  v-for="city in cities"
+                  :key="city.city_id"
+                  :value="city.branch_id"
+                >
+                  {{ city.city_name }}
+                </option>
+              </select>
+
+              <a
+                v-for="number in numbers[currentBransh]"
+                class="flex items-center gap-4"
+                :href="`tel:${number}`"
+              >
                 <div class="bg-slate-100 p-3 rounded-xl">
                   <Phone class="w-5 h-5 text-primary" />
                 </div>
-                <span class="font-bold text-slate-700" dir="ltr"
-                  >+964 000 000 0000</span
-                >
-              </div>
+                <span class="font-bold text-slate-700" dir="ltr">
+                  {{ number }}
+                </span>
+              </a>
               <div class="flex items-center gap-4">
                 <div class="bg-slate-100 p-3 rounded-xl">
                   <Mail class="w-5 h-5 text-primary" />

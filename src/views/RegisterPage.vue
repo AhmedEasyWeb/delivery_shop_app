@@ -8,6 +8,7 @@ import { toast } from "vue-sonner";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { Device } from "@capacitor/device";
+import { MapPin, ArrowRight, Bike, Lock, Camera } from "lucide-vue-next";
 
 const loading = ref(false);
 const cities = ref<{ city_id: number; city_name: string }[]>([]);
