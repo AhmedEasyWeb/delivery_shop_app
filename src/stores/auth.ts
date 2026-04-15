@@ -23,7 +23,6 @@ interface Driver {
   license_photo: string;
   rate: number | null;
   created_at: string;
-  isOnline: boolean;
 }
 
 export const useAuthStore = defineStore("auth", () => {
