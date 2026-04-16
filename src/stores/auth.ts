@@ -90,7 +90,7 @@ export const useAuthStore = defineStore("auth", () => {
       isAuthenticated.value = true;
       return true;
     } catch (err: any) {
-      error.value = err.data.message;
+      error.value = err.response?.data?.message || err.message || "حدث خطأ غير متوقع";
       isAuthenticated.value = false;
       return false;
     } finally {
@@ -118,7 +118,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   async function checkRestaurantSession() {
     try {
-      const response = await api.get("/api/auth/restaurant");
+      const response = await api.get("/auth/restaurant");
 
       if (response.status !== 200) return false;
 

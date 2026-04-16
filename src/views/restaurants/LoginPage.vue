@@ -38,13 +38,16 @@ async function handleLogin() {
   loading.value = true;
 
   try {
-    await auth.restaurantlogin(phone.value, password.value);
-    toast.success("تم تسجيل الدخول بنجاح");
-    router.push("/restaurant/dashboard");
+    const success = await auth.restaurantlogin(phone.value, password.value);
+    
+    if (success) {
+      toast.success("تم تسجيل الدخول بنجاح");
+      router.push("/restaurant/dashboard");
+    } else {
+      toast.error(auth.error || "رقم الهاتف أو كلمة المرور غير صحيحة");
+    }
   } catch (err: any) {
-    const errorMessage =
-      err.response?.data?.message || "رقم الهاتف أو كلمة المرور غير صحيحة";
-    toast.error(errorMessage);
+    toast.error("حدث خطأ غير متوقع");
   } finally {
     loading.value = false;
   }

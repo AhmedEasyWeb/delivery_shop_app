@@ -16,10 +16,16 @@ export async function setLocalData(itemName: string, itemData: any) {
 
 export async function getLocalData(itemName: string) {
   if (Capacitor.getPlatform() === "web") {
-    return JSON.parse(localStorage.getItem(itemName) || "");
+    const data = localStorage.getItem(itemName);
+    if (!data) return null;
+    try {
+      return JSON.parse(data);
+    } catch {
+      return data;
+    }
   }
 
-  return (await Preferences.get({ key: "sessionToken" })).value;
+  return (await Preferences.get({ key: itemName })).value;
 }
 
 export async function removeLocalData(itemName: string) {
