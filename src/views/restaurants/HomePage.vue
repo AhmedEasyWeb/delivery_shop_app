@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import EditOrders from "@/components/EditOrders.vue";
+import RestaurantDriverMap from "@/components/RestaurantDriverMap.vue";
 import { computed, onMounted, ref, watch } from "vue";
 import { Clock, CheckCircle } from "lucide-vue-next";
 import Header from "@/components/Header.vue";
@@ -28,6 +29,13 @@ const error = ref("");
 const editDialogOpen = ref(false);
 const selectedOrder = ref<Order>({} as Order);
 const status = ref<any>({});
+const showDriverMap = ref(false);
+const selectedDriverId = ref<number | null>(null);
+
+const handleShowDriverLocation = (driverId: number) => {
+  selectedDriverId.value = driverId;
+  showDriverMap.value = true;
+};
 
 const { messages, sendMessage } = useWebRestaurantSocket(auth.user?.id || 0);
 
@@ -187,6 +195,7 @@ watch(
                 editDialogOpen = open;
               }
             "
+            @show-driver-location="handleShowDriverLocation"
           />
 
           <div v-if="!orders.length" class="text-center py-8">
@@ -206,4 +215,10 @@ watch(
     </Card>
   </div>
   <EditOrders v-model:open="editDialogOpen" :order="selectedOrder" />
+  <RestaurantDriverMap
+    v-model="showDriverMap"
+    :driverId="selectedDriverId"
+    :messages="messages"
+    :sendMessage="sendMessage"
+  />
 </template>

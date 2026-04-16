@@ -15,4 +15,5 @@ export interface Order {
   total_price?: number;
   delivery_cost?: number;
   sum_of_completed_orders?: number;
+  payment_method: string;
 }
