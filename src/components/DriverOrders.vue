@@ -263,7 +263,7 @@ onBeforeUnmount(() => {
       <div class="space-y-3">
         <Button
           class="w-full h-12 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-bold"
-          @click="$emit('contact', props.order.user_phone)"
+          @click="redirectToWhatsApp(props.order.user_phone)"
         >
           <MessageCircle class="h-5 w-5 ml-2" />
           تواصل عبر واتساب
