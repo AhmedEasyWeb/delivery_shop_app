@@ -98,33 +98,42 @@ async function pickLogo() {
 async function getLocation() {
   fetchingLocation.value = true;
   try {
-    const permission = await Geolocation.requestPermissions();
-    const granted =
-      permission.location === "granted" ||
-      (permission as any).coarseLocation === "granted";
+    // 1. Check current permission status first
+    const check = await Geolocation.checkPermissions();
 
-    if (!granted) {
-      toast.error("يجب السماح بالوصول إلى الموقع");
-      return;
+    if (check.location !== "granted") {
+      const request = await Geolocation.requestPermissions();
+      if (request.location !== "granted") {
+        toast.error("يجب السماح بالوصول إلى الموقع من إعدادات الهاتف");
+        return;
+      }
     }
 
+    // 2. Get position with more relaxed settings
     const position = await Geolocation.getCurrentPosition({
-      enableHighAccuracy: true,
-      timeout: 10000,
+      enableHighAccuracy: false, // Set to false if you are testing indoors/on slow GPS
+      timeout: 15000, // Increase to 15 seconds
+      maximumAge: 3000, // Accept a cached location from the last 3 seconds
     });
 
     const lat = position.coords.latitude.toFixed(6);
     const lng = position.coords.longitude.toFixed(6);
+
     formData.value.location = `${lat}, ${lng}`;
     toast.success("تم تحديد موقعك بنجاح");
-  } catch (error) {
-    console.error(error);
-    toast.error("فشل في الحصول على الموقع");
+  } catch (error: any) {
+    console.error("Location Error:", error);
+
+    // Specific error handling
+    if (error.code === "3" || error.message?.includes("timeout")) {
+      toast.error("انتهى الوقت، تأكد من تشغيل الـ GPS");
+    } else {
+      toast.error("فشل في الحصول على الموقع، تأكد من الصلاحيات");
+    }
   } finally {
     fetchingLocation.value = false;
   }
 }
-
 async function handleRegister() {
   loading.value = true;
   try {
@@ -161,32 +170,48 @@ onMounted(async () => {
   fetchCities();
 });
 </script>
-
 <template>
-  <main class="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-    <Card class="w-full max-w-2xl shadow-xl border-t-4 border-t-primary">
+  <main
+    dir="rtl"
+    class="min-h-screen flex items-center justify-center bg-slate-50 p-4"
+  >
+    <Card
+      class="w-full max-w-2xl shadow-xl border-t-4 border-t-primary bg-white text-slate-900"
+    >
       <CardHeader class="text-center space-y-2">
-        <CardTitle class="text-3xl font-bold">تسجيل مطعم جديد</CardTitle>
-        <CardDescription>ابدأ رحلتك وأضف مطعمك خلال دقائق</CardDescription>
+        <CardTitle class="text-3xl font-bold text-slate-900"
+          >تسجيل مطعم جديد</CardTitle
+        >
+        <CardDescription class="text-slate-500"
+          >ابدأ رحلتك وأضف مطعمك خلال دقائق</CardDescription
+        >
       </CardHeader>
 
       <CardContent>
-        <form @submit.prevent="handleRegister" class="space-y-10">
-          <div class="space-y-5">
+        <form @submit.prevent="handleRegister" class="space-y-6">
+          <div class="space-y-4">
             <div class="flex items-center gap-2 border-b pb-2">
               <Utensils class="w-5 h-5 text-primary" />
-              <h3 class="font-semibold text-lg">بيانات المطعم</h3>
+              <h3 class="font-semibold text-lg text-slate-800">
+                بيانات المطعم
+              </h3>
             </div>
 
             <div class="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label>اسم المطعم</Label>
-                <Input v-model="formData.restaurant_name" required />
+              <div class="space-y-1">
+                <Label class="text-slate-700">اسم المطعم</Label>
+                <Input
+                  v-model="formData.restaurant_name"
+                  required
+                  class="bg-white text-slate-900 border-slate-200 focus:ring-primary"
+                />
               </div>
-              <div>
-                <Label>المدينة</Label>
+              <div class="space-y-1">
+                <Label class="text-slate-700">المدينة</Label>
                 <Select v-model="formData.restaurant_city">
-                  <SelectTrigger>
+                  <SelectTrigger
+                    class="bg-white text-slate-900 border-slate-200"
+                  >
                     <SelectValue placeholder="اختر المدينة" />
                   </SelectTrigger>
                   <SelectContent>
@@ -201,120 +226,104 @@ onMounted(async () => {
               </div>
             </div>
 
-            <div>
-              <Label>العنوان</Label>
-              <Textarea v-model="formData.address" required />
+            <div class="space-y-1">
+              <Label class="text-slate-700">العنوان</Label>
+              <Textarea
+                v-model="formData.address"
+                required
+                class="bg-white text-slate-900 border-slate-200"
+              />
             </div>
 
             <div class="grid md:grid-cols-2 gap-4">
-              <div class="relative">
-                <FileText
-                  class="absolute right-3 top-3 w-4 h-4 text-gray-400"
-                />
-                <Input
-                  v-model="formData.commercial_register"
-                  class="pr-9"
-                  placeholder="السجل التجاري"
-                />
-              </div>
-
-              <div class="flex gap-2">
-                <div class="relative flex-1">
-                  <MapPin
+              <div class="relative space-y-1">
+                <Label class="text-slate-700">السجل التجاري</Label>
+                <div class="relative">
+                  <FileText
                     class="absolute right-3 top-3 w-4 h-4 text-gray-400"
                   />
                   <Input
-                    v-model="formData.location"
-                    readonly
-                    class="pr-9 bg-gray-50"
-                    placeholder="الموقع"
+                    v-model="formData.commercial_register"
+                    class="pr-9 bg-white text-slate-900 border-slate-200"
+                    placeholder="السجل التجاري"
                   />
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  @click="getLocation"
-                  :disabled="fetchingLocation"
-                >
-                  <Loader
-                    v-if="fetchingLocation"
-                    class="animate-spin w-4 h-4"
-                  />
-                  <MapPin v-else class="w-4 h-4" />
-                </Button>
+              </div>
+
+              <div class="space-y-1">
+                <Label class="text-slate-700">الموقع الجغرافي</Label>
+                <div class="flex gap-2">
+                  <div class="relative flex-1">
+                    <MapPin
+                      class="absolute right-3 top-3 w-4 h-4 text-gray-400"
+                    />
+                    <Input
+                      v-model="formData.location"
+                      readonly
+                      class="pr-9 bg-slate-100 text-slate-900 border-slate-200 cursor-not-allowed"
+                      placeholder="الموقع"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    @click="getLocation"
+                    :disabled="fetchingLocation"
+                    class="shrink-0"
+                  >
+                    <Loader
+                      v-if="fetchingLocation"
+                      class="animate-spin w-4 h-4"
+                    />
+                    <MapPin v-else class="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Owner Info -->
-          <div class="space-y-5">
+          <div class="space-y-4 pt-4">
             <div class="flex items-center gap-2 border-b pb-2">
               <User class="w-5 h-5 text-primary" />
-              <h3 class="font-semibold text-lg">بيانات المالك</h3>
+              <h3 class="font-semibold text-lg text-slate-800">
+                بيانات المالك
+              </h3>
             </div>
-            <Input v-model="formData.full_name" placeholder="الاسم بالكامل" />
-            <div class="grid md:grid-cols-2 gap-4">
-              <div class="relative">
-                <Phone class="absolute right-3 top-3 w-4 h-4 text-gray-400" />
-                <Input
-                  v-model="formData.phone"
-                  class="pr-9"
-                  placeholder="رقم الهاتف"
-                />
-              </div>
-              <div class="relative">
-                <Lock class="absolute right-3 top-3 w-4 h-4 text-gray-400" />
-                <Input
-                  type="password"
-                  v-model="formData.password"
-                  class="pr-9"
-                  placeholder="كلمة المرور"
-                />
-              </div>
-            </div>
-          </div>
 
-          <!-- FIX 1: Logo Upload via Capacitor Camera plugin -->
-          <div class="space-y-4">
-            <Label class="text-lg font-semibold">شعار المطعم</Label>
-            <div
-              @click="pickLogo"
-              class="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-slate-50"
-            >
-              <template v-if="!logoPhotoPreview">
-                <Upload class="mx-auto w-6 h-6 text-primary" />
-                <p class="text-sm text-gray-500 mt-2">
-                  اضغط لاختيار الشعار من المعرض
-                </p>
-              </template>
-              <img
-                v-else
-                :src="logoPhotoPreview"
-                class="mx-auto h-32 object-contain"
+            <div class="space-y-1">
+              <Label class="text-slate-700">الاسم بالكامل</Label>
+              <Input
+                v-model="formData.full_name"
+                class="bg-white text-slate-900"
               />
             </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+              <div class="relative space-y-1">
+                <Label class="text-slate-700">رقم الهاتف</Label>
+                <div class="relative">
+                  <Phone class="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                  <Input
+                    v-model="formData.phone"
+                    class="pr-9 bg-white text-slate-900"
+                    dir="ltr"
+                  />
+                </div>
+              </div>
+              <div class="relative space-y-1">
+                <Label class="text-slate-700">كلمة المرور</Label>
+                <div class="relative">
+                  <Lock class="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                  <Input
+                    type="password"
+                    v-model="formData.password"
+                    class="pr-9 bg-white text-slate-900"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
-
-          <Button
-            type="submit"
-            class="w-full h-12 text-lg font-bold"
-            :disabled="loading"
-          >
-            <Loader v-if="loading" class="ml-2 animate-spin" />
-            إنشاء الحساب
-          </Button>
         </form>
-
-        <div class="mt-6 text-center text-sm text-gray-600">
-          لديك حساب بالفعل؟
-          <Button
-            variant="link"
-            class="text-primary font-bold"
-            @click="router.push('/restaurant')"
-          >
-            تسجيل الدخول
-          </Button>
-        </div>
       </CardContent>
     </Card>
   </main>
