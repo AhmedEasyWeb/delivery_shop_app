@@ -57,6 +57,7 @@ export const useAuthStore = defineStore("auth", () => {
 
       const response = await api.post("/auth/driver/login", formData);
 
+      toast.warning(response.data.sessionToken);
       await setLocalData("sessionToken", response.data.sessionToken);
 
       driver.value = response.data.driver;
