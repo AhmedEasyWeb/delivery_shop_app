@@ -2,7 +2,7 @@
 import EditOrders from "@/components/EditOrders.vue";
 import { computed, onMounted, ref, watch } from "vue";
 import { Clock, CheckCircle } from "lucide-vue-next";
-import RestaurantsHeader from "@/components/RestaurantsHeader.vue";
+import Header from "@/components/Header.vue";
 import OrderCard from "@/components/OrderCard.vue";
 import {
   Card,
@@ -128,7 +128,7 @@ watch(
 );
 </script>
 <template>
-  <RestaurantsHeader />
+  <Header />
   <div class="p-6" dir="rtl">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       <Card>

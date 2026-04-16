@@ -4,14 +4,7 @@ import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import {
-  Navigation,
-  Phone,
-  Hash,
-  Clock,
-  Wallet,
-  FileText,
-} from "lucide-vue-next";
+import { Navigation, Phone, Clock, Wallet, FileText, X } from "lucide-vue-next";
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { httpRequest } from "@/utils/http";
 import ReportRestaurantForm from "@/components/ReportRestaurantForm.vue";
@@ -33,6 +26,10 @@ const props = defineProps({
 const timer = ref("00:00");
 const timerColor = ref("text-green-600");
 let interval: any = null;
+
+// Modal state
+const isModalOpen = ref(false);
+const selectedImageUrl = ref("");
 
 function startTimer(createdAt: string) {
   const start = new Date(createdAt).getTime();
@@ -61,6 +58,17 @@ function calcDriverCost(totalCost: number) {
   const deduction = totalCost * basedPercentage;
   const total = totalCost - deduction;
   return total;
+}
+
+function openImage(url: string) {
+  selectedImageUrl.value = url;
+  isModalOpen.value = true;
+}
+
+function redirectToWhatsApp(phone: string) {
+  const cleanPhone = phone.replace(/\D/g, "");
+  const whatsappUrl = `https://wa.me/${cleanPhone}`;
+  window.open(whatsappUrl, "_blank");
 }
 
 const openGoogleMaps = async (location: string) => {
@@ -239,6 +247,7 @@ onBeforeUnmount(() => {
           <span class="text-xs font-bold text-slate-500">صورة الإيصال</span>
         </div>
         <img
+          @click="openImage(baseUrl + props.order.order_receipt)"
           :src="baseUrl + props.order.order_receipt"
           alt="صورة الإيصال"
           class="w-full h-40 object-contain rounded-2xl bg-white border border-slate-100 shadow-sm"
@@ -251,23 +260,33 @@ onBeforeUnmount(() => {
         مفيش إيصال مرفوع
       </p>
 
-      <div class="grid grid-cols-2 gap-3">
+      <div class="space-y-3">
         <Button
-          variant="outline"
-          class="h-12 rounded-2xl border-slate-200 font-bold text-slate-700"
-          @click="openGoogleMaps(props.order.restaurant.location)"
+          class="w-full h-12 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-bold"
+          @click="$emit('contact', props.order.user_phone)"
         >
-          <Navigation class="h-4 w-4 ml-2" />
-          افتح الموقع
+          <MessageCircle class="h-5 w-5 ml-2" />
+          تواصل عبر واتساب
         </Button>
-        <Button
-          variant="outline"
-          class="h-12 rounded-2xl border-slate-200 font-bold text-slate-700"
-          @click="callCustomer(props.order.user_phone)"
-        >
-          <Phone class="h-4 w-4 ml-2" />
-          اتصل بالعميل
-        </Button>
+
+        <div class="grid grid-cols-2 gap-3">
+          <Button
+            variant="outline"
+            class="h-12 rounded-2xl border-slate-200 font-bold text-slate-700"
+            @click="openGoogleMaps(props.order.restaurant.location)"
+          >
+            <Navigation class="h-4 w-4 ml-2" />
+            الموقع
+          </Button>
+          <Button
+            variant="outline"
+            class="h-12 rounded-2xl border-slate-200 font-bold text-slate-700"
+            @click="callCustomer(props.order.user_phone)"
+          >
+            <Phone class="h-4 w-4 ml-2" />
+            اتصال هاتفي
+          </Button>
+        </div>
       </div>
 
       <div v-if="props.order.order_status !== 'preparing'" class="pt-2">
@@ -294,4 +313,24 @@ onBeforeUnmount(() => {
       </div>
     </CardContent>
   </Card>
+  <Transition name="fade">
+    <div
+      v-if="isModalOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+      @click.self="isModalOpen = false"
+    >
+      <button
+        @click="isModalOpen = false"
+        class="absolute top-6 right-6 p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors"
+      >
+        <X class="h-6 w-6" />
+      </button>
+
+      <img
+        :src="selectedImageUrl"
+        class="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain"
+        alt="Order Preview"
+      />
+    </div>
+  </Transition>
 </template>

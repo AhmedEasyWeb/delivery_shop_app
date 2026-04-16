@@ -1,13 +1,11 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
-import { Preferences } from "@capacitor/preferences";
 import api from "@/api/axios";
 import {
   getLocalData,
   removeLocalData,
   setLocalData,
 } from "@/utils/localStorage";
-import { toast } from "vue-sonner";
 
 interface Driver {
   driver_id: number;
@@ -72,13 +70,13 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  async function restaurantlogin(name: string, password: string) {
+  async function restaurantlogin(phone: string, password: string) {
     try {
       isLoading.value = true;
       error.value = null;
 
       const response = await api.post("/auth/restaurant/login", {
-        restaurant_name: name,
+        phone,
         password,
       });
 
