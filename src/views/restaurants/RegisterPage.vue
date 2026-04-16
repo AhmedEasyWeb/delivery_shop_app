@@ -32,6 +32,7 @@ import {
 } from "lucide-vue-next";
 import Textarea from "@/components/ui/textarea/Textarea.vue";
 import api from "@/api/axios";
+import { Geolocation } from "@capacitor/geolocation";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -72,23 +73,36 @@ function handleFileUpload(event: Event) {
     logoPhotoPreview.value = URL.createObjectURL(file);
   }
 }
-
-function getLocation() {
+async function getLocation() {
   fetchingLocation.value = true;
 
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      formData.value.location = `${pos.coords.latitude.toFixed(
-        6,
-      )}, ${pos.coords.longitude.toFixed(6)}`;
-      toast.success("تم تحديد موقعك");
+  try {
+    // Request permission (important for mobile)
+    const permission = await Geolocation.requestPermissions();
+
+    if (permission.location !== "granted") {
+      toast.error("يجب السماح بالوصول إلى الموقع");
       fetchingLocation.value = false;
-    },
-    () => {
-      toast.error("فشل في الحصول على الموقع");
-      fetchingLocation.value = false;
-    },
-  );
+      return;
+    }
+
+    const position = await Geolocation.getCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 10000,
+    });
+
+    const lat = position.coords.latitude.toFixed(6);
+    const lng = position.coords.longitude.toFixed(6);
+
+    formData.value.location = `${lat}, ${lng}`;
+
+    toast.success("تم تحديد موقعك بنجاح");
+  } catch (error) {
+    console.error(error);
+    toast.error("فشل في الحصول على الموقع");
+  } finally {
+    fetchingLocation.value = false;
+  }
 }
 
 async function handleRegister() {
