@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { onMounted, ref } from "vue";
-import Header from "@/components/Header.vue";
+import RestaurantsHeader from "@/components/RestaurantsHeader.vue";
 import {
   Plus,
   Trash2,
@@ -131,7 +131,7 @@ onMounted(fetchCities);
 
 <template>
   <div dir="rtl" class="min-h-screen bg-slate-50 pb-10">
-    <Header />
+    <RestaurantsHeader />
 
     <main class="max-w-2xl mx-auto p-4 space-y-6">
       <div class="mt-4">

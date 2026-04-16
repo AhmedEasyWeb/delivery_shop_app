@@ -186,7 +186,7 @@ async function handleRegister() {
 onMounted(async () => {
   await authStore.init();
   if (authStore.isAuthenticated) {
-    router.push("/restaurant/dashboard");
+    router.push("/restaurant");
   } else {
     fetchCities();
   }
