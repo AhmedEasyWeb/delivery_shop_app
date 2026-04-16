@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useAuthStore } from "@/stores/auth";
-import { onMounted, ref } from "vue";
+import { ref } from "vue";
 import { useRouter } from "vue-router";
 import {
   Menu,
@@ -26,15 +26,6 @@ import CreateOrders from "./CreateOrders.vue";
 
 const auth = useAuthStore();
 const router = useRouter();
-
-onMounted(async () => {
-  await auth.init();
-
-  if (!auth.isAuthenticated) {
-    auth.logout();
-    router.push("/restaurant");
-  }
-});
 
 const isDrawerOpen = ref(false);
 

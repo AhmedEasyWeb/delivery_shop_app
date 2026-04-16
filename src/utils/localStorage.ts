@@ -9,7 +9,7 @@ export async function setLocalData(itemName: string, itemData: any) {
   if (Capacitor.getPlatform() === "android") {
     await Preferences.set({
       key: itemName,
-      value: itemData,
+      value: JSON.stringify(itemData),
     });
   }
 }
@@ -19,7 +19,7 @@ export async function getLocalData(itemName: string) {
     return JSON.parse(localStorage.getItem(itemName) || "");
   }
 
-  return (await Preferences.get({ key: "sessionToken" })).value;
+  return JSON.parse((await Preferences.get({ key: itemName })).value || "");
 }
 
 export async function removeLocalData(itemName: string) {

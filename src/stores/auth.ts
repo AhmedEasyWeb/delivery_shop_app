@@ -30,8 +30,12 @@ export const useAuthStore = defineStore("auth", () => {
   const type = ref("");
   const isLoading = ref(false);
   const error = ref<string | null>(null);
+  const isReady = ref(false);
 
   async function init() {
+    if (isReady.value) return;
+
+    isReady.value = false;
     const token = await getLocalData("sessionToken");
 
     if (!token) {
@@ -46,6 +50,8 @@ export const useAuthStore = defineStore("auth", () => {
         await logout();
       }
     }
+
+    isReady.value = true;
   }
 
   async function login(formData: FormData) {
@@ -154,6 +160,7 @@ export const useAuthStore = defineStore("auth", () => {
     type,
     isAuthenticated,
     isLoading,
+    isReady,
     error,
     init,
     login,
