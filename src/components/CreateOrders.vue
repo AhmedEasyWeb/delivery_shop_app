@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+// import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -14,8 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader, Plus } from "lucide-vue-next";
 import { onMounted, ref, watch } from "vue";
+import api from "@/api/axios";
 import { toast } from "vue-sonner";
-import { httpRequest } from "@/utils/http";
 import {
   Select,
   SelectContent,
@@ -25,8 +25,9 @@ import {
   SelectValue,
   SelectLabel,
 } from "@/components/ui/select";
-import api from "@/api/axios";
+import { useAuthStore } from "@/stores/auth";
 
+const auth = useAuthStore();
 const isCreateOrderOpen = ref(false);
 const receiptImage = ref<File | null>(null);
 const receiptPreview = ref<string | null>(null);
@@ -34,31 +35,13 @@ const loading = ref(false);
 const newOrder = ref({
   customerPhone: "",
   totalAmount: 0,
-  deliveryCost: 0,
   order_city: "",
+  payment_method: "",
 });
+const deliveryAreas = ref<any>([]);
 
 const showDropdown = ref(false);
 const phoneInputRef = ref<HTMLElement | null>(null);
-const cities = ref<any>([]);
-
-async function fetchCities() {
-  try {
-    const resp = await api.get("/cities");
-    cities.value = resp.data;
-  } catch (err: any) {
-    console.error("fetchCities error:", err);
-    toast.error("فشل تحميل المدن");
-  }
-}
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-  });
-};
 
 const handleReceiptUpload = (event: Event) => {
   const target = event.target as HTMLInputElement;
@@ -69,35 +52,46 @@ const handleReceiptUpload = (event: Event) => {
   }
 };
 
+async function fetchCities() {
+  try {
+    const restaurantRes = await api.get(
+      `/restaurants/${auth.user.restaurant_id}/cities`,
+    );
+
+    deliveryAreas.value = restaurantRes.data.restaurant?.delivery_areas || [];
+  } catch (err: any) {
+    toast.error("فشل تحميل المدن");
+  }
+}
+
 const handleCreateOrder = async () => {
   loading.value = true;
 
-  let base64Image: string | null = null;
+  const formData = new FormData();
+  const getDeliveryCost = deliveryAreas.value.filter((area: any) => {
+    return area.city === newOrder.value.order_city;
+  })[0].deliveryCost;
+
+  formData.append("customerPhone", newOrder.value.customerPhone);
+  formData.append("totalAmount", newOrder.value.totalAmount.toString());
+  formData.append("order_city", newOrder.value.order_city);
+  formData.append("deliveryCost", getDeliveryCost);
+  formData.append("paymentMethod", newOrder.value.payment_method.toString());
   if (receiptImage.value) {
-    base64Image = await fileToBase64(receiptImage.value);
+    formData.append("receiptImage", receiptImage.value);
   }
 
-  const payload = {
-    customerPhone: newOrder.value.customerPhone,
-    totalAmount: newOrder.value.totalAmount,
-    deliveryCost: newOrder.value.deliveryCost,
-    receiptImage: base64Image,
-    order_city: newOrder.value.order_city,
-  };
-
   try {
-    await httpRequest({
-      url: "/api/orders",
-      method: "POST",
-      data: payload,
+    await api.post("/orders", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
     toast.success("تم إنشاء الطلب بنجاح");
 
     newOrder.value = {
       customerPhone: "",
       totalAmount: 0,
-      deliveryCost: 0,
       order_city: "",
+      payment_method: "",
     };
     receiptImage.value = null;
     receiptPreview.value = null;
@@ -166,8 +160,13 @@ watch(isCreateOrderOpen, (isOpen) => {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-          <div class="space-y-2">
+        <div
+          class="grid gap-4"
+          :class="
+            newOrder.payment_method === 'cash' ? 'grid-cols-2' : 'grid-cols-1'
+          "
+        >
+          <div class="space-y-2" v-if="newOrder.payment_method === 'cash'">
             <Label for="totalAmount">إجمالي السعر (ج.م)</Label>
             <Input
               id="totalAmount"
@@ -186,16 +185,41 @@ watch(isCreateOrderOpen, (isOpen) => {
                 <SelectGroup>
                   <SelectLabel class="text-gray-400">المدينة</SelectLabel>
                   <SelectItem
-                    v-for="city in cities"
-                    :key="city.city_id"
-                    :value="city.city_name"
+                    v-for="city in deliveryAreas"
+                    :key="city.city"
+                    :value="city.city"
                   >
-                    {{ city.city_name }}
+                    {{ city.city }}
                   </SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
           </div>
+        </div>
+        <div class="space-y-2">
+          <Label>طريقة الدفع</Label>
+          <Select v-model="newOrder.payment_method" required>
+            <SelectTrigger class="w-full">
+              <SelectValue placeholder="اختر طريقة الدفع" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel class="text-gray-400">
+                  الخيارات المتاحة
+                </SelectLabel>
+
+                <SelectItem value="cash">الدفع عند الاستلام</SelectItem>
+
+                <SelectItem value="ewallet"
+                  >المحافظ الإلكترونية (فودافون كاش، إلخ)</SelectItem
+                >
+
+                <SelectItem value="card">بطاقة ائتمان / ميزة</SelectItem>
+
+                <SelectItem value="instapay">إنستا باي (Instapay)</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
         <div class="flex flex-col space-y-2">
           <Label for="customerPhone">رقم هاتف العميل</Label>
@@ -206,22 +230,6 @@ watch(isCreateOrderOpen, (isOpen) => {
             placeholder="01212158465"
           />
         </div>
-
-        <div class="flex flex-col space-y-2">
-          <Label for="deliveryCost">تكلفة التوصيل</Label>
-          <Input
-            v-model="newOrder.deliveryCost"
-            id="deliveryCost"
-            type="number"
-            placeholder="0.00"
-          />
-        </div>
-
-        <div class="flex space-x-2">
-          <Button @click="newOrder.deliveryCost += 5">+5 ج.م</Button>
-          <Button @click="newOrder.deliveryCost += 10">+10 ج.م</Button>
-          <Button @click="newOrder.deliveryCost += 15">+15 ج.م</Button>
-        </div>
       </div>
 
       <DialogFooter>
@@ -231,7 +239,7 @@ watch(isCreateOrderOpen, (isOpen) => {
         <Button
           class="bg-primary hover:bg-primary/90"
           @click="handleCreateOrder"
-          :disabled="!newOrder.totalAmount || !newOrder.deliveryCost || loading"
+          :disabled="!newOrder.order_city || loading"
         >
           <Loader v-if="loading" class="animate-spin" />
           <span v-else>إنشاء الطلب</span>

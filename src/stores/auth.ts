@@ -35,7 +35,6 @@ export const useAuthStore = defineStore("auth", () => {
   async function init() {
     const token = await getLocalData("sessionToken");
 
-    toast.warning(token);
     if (!token) {
       isAuthenticated.value = false;
       return;
@@ -57,7 +56,6 @@ export const useAuthStore = defineStore("auth", () => {
 
       const response = await api.post("/auth/driver/login", formData);
 
-      toast.warning(response.data.sessionToken);
       await setLocalData("sessionToken", response.data.sessionToken);
 
       driver.value = response.data.driver;
@@ -90,7 +88,8 @@ export const useAuthStore = defineStore("auth", () => {
       isAuthenticated.value = true;
       return true;
     } catch (err: any) {
-      error.value = err.response?.data?.message || err.message || "حدث خطأ غير متوقع";
+      error.value =
+        err.response?.data?.message || err.message || "حدث خطأ غير متوقع";
       isAuthenticated.value = false;
       return false;
     } finally {
