@@ -50,6 +50,8 @@ export function useDriverTracker() {
   let watcherId: string | null = null;
   let pingInterval: any = null;
   let hasSentInitialLocation = false;
+  let wakeLock: any = null;
+  let visibilityHandler: (() => void) | null = null;
 
   async function requestPermissions() {
     const permResult = await LocalNotifications.requestPermissions();
@@ -256,6 +258,23 @@ export function useDriverTracker() {
           toast.success("📦 طلب جديد قريب منك");
         }
 
+        if (data.type === "new_orders_nearby") {
+          // Show notification for the first one or a summary notification
+          if (data.orders.length > 0) {
+            showOrderNotification(data.orders[0]);
+          }
+          
+          data.orders.forEach((order: any) => {
+            sendUpdateOrdersWs(order.order_id, order.restaurant_id);
+          });
+
+          ordersStore.addOrders(data.orders);
+          
+          if (data.orders.length > 0) {
+            authStore.setStationedAt(data.orders[0].restaurant_id);
+          }
+        }
+
         if (data.type === "updated_order") {
           ordersStore.updateOrder(data.order);
         }
@@ -346,7 +365,14 @@ export function useDriverTracker() {
     stopHeartbeat();
 
     pingInterval = setInterval(() => {
-      if (ws && ws.readyState === WebSocket.OPEN) {
+      // Reconnect WebSocket if it dropped while in background
+      if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+        console.warn("💓 Heartbeat: WebSocket is dead, reconnecting...");
+        connectWebSocket();
+        return;
+      }
+
+      if (ws.readyState === WebSocket.OPEN) {
         if (lastLocation.value) {
           ws.send(
             JSON.stringify({
@@ -363,7 +389,7 @@ export function useDriverTracker() {
           console.log("⚠️ Heartbeat skipped - no location available yet");
         }
       }
-    }, 30000);
+    }, 20000);
   }
 
   function stopHeartbeat() {
@@ -373,11 +399,59 @@ export function useDriverTracker() {
     }
   }
 
+  async function acquireWakeLock() {
+    try {
+      if ("wakeLock" in navigator) {
+        wakeLock = await (navigator as any).wakeLock.request("screen");
+        console.log("✅ Wake lock acquired");
+
+        wakeLock.addEventListener("release", () => {
+          console.log("⚠️ Wake lock released");
+        });
+      }
+    } catch (err) {
+      console.warn("⚠️ Wake lock not available:", err);
+    }
+  }
+
+  function releaseWakeLock() {
+    if (wakeLock) {
+      wakeLock.release();
+      wakeLock = null;
+      console.log("🛑 Wake lock released manually");
+    }
+  }
+
+  function setupVisibilityListener() {
+    if (visibilityHandler) return;
+
+    visibilityHandler = () => {
+      if (document.visibilityState === "visible" && isOnline.value) {
+        console.log("👁️ App became visible, checking WebSocket...");
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          connectWebSocket();
+        }
+        acquireWakeLock();
+      }
+    };
+
+    document.addEventListener("visibilitychange", visibilityHandler);
+  }
+
+  function removeVisibilityListener() {
+    if (visibilityHandler) {
+      document.removeEventListener("visibilitychange", visibilityHandler);
+      visibilityHandler = null;
+    }
+  }
+
   async function goOnline() {
     isOnline.value = true;
     await requestPermissions();
     await setupNotificationChannel();
     await startForegroundService();
+    await acquireWakeLock();
+    setupVisibilityListener();
     await startGeolocation();
     connectWebSocket();
   }
@@ -385,6 +459,9 @@ export function useDriverTracker() {
   async function goOffline() {
     isOnline.value = false;
     hasSentInitialLocation = false;
+    stopHeartbeat();
+    removeVisibilityListener();
+    releaseWakeLock();
 
     if (ws) ws.close(1000, "Driver offline");
     ws = null;

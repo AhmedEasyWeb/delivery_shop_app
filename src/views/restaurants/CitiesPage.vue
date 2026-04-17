@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { onMounted, ref } from "vue";
-import RestaurantsHeader from "@/components/RestaurantsHeader.vue";
+import Header from "@/components/Header.vue";
 import {
   Plus,
   Trash2,
@@ -34,7 +34,7 @@ const auth = useAuthStore();
 const newCity = ref("");
 const cities = ref<{ city_id: number; city_name: string }[]>([]);
 const newCost = ref<number | "">("");
-
+const isLoading = ref(false);
 const editingIndex = ref<number | null>(null);
 const editValue = ref<number | "">("");
 
@@ -77,6 +77,7 @@ function startEdit(index: number, currentCost: number) {
 
 async function saveEdit(index: number) {
   const area = deliveryAreas.value[index];
+  isLoading.value = true;
   try {
     if (area) {
       await api.put(`/restaurants/${auth.user.restaurant_id}/cities`, {
@@ -89,16 +90,22 @@ async function saveEdit(index: number) {
         editingIndex.value = null;
       }
       toast.success("تم تحديث السعر");
+      isLoading.value = false;
       return;
     }
     toast.error("فشل التحديث");
+    isLoading.value = false;
   } catch (err) {
     toast.error("فشل التحديث");
+    isLoading.value = false;
+  } finally {
+    isLoading.value = false;
   }
 }
 
 async function removeArea(index: number) {
   const cityName = deliveryAreas.value[index]?.city;
+  isLoading.value = true;
   try {
     if (cityName) {
       await api.delete(`/restaurants/${auth.user.restaurant_id}/cities`, {
@@ -106,23 +113,34 @@ async function removeArea(index: number) {
       });
       deliveryAreas.value.splice(index, 1);
       toast.success("تم الحذف بنجاح");
+      isLoading.value = false;
       return;
     }
 
     toast.error("حدث خطأ أثناء الحذف");
+    isLoading.value = false;
   } catch (err) {
     toast.error("حدث خطأ أثناء الحذف");
+    isLoading.value = false;
+  } finally {
+    isLoading.value = false;
   }
 }
 
 async function saveSettings() {
+  isLoading.value = true;
+
   try {
     await api.post(`/restaurants/${auth.user.restaurant_id}/cities`, {
       cities: deliveryAreas.value,
     });
     toast.success("تم حفظ جميع التغييرات");
+    isLoading.value = false;
   } catch (err) {
     toast.error("فشل حفظ التغييرات");
+    isLoading.value = false;
+  } finally {
+    isLoading.value = false;
   }
 }
 
@@ -131,7 +149,7 @@ onMounted(fetchCities);
 
 <template>
   <div dir="rtl" class="min-h-screen bg-slate-50 pb-10">
-    <RestaurantsHeader />
+    <Header />
 
     <main class="max-w-2xl mx-auto p-4 space-y-6">
       <div class="mt-4">
@@ -271,9 +289,11 @@ onMounted(fetchCities);
       <div class="pt-4" v-if="deliveryAreas.length > 0">
         <Button
           @click="saveSettings"
+          :disabled="isLoading"
           class="w-full h-14 rounded-2xl text-lg font-extrabold shadow-lg shadow-primary/20"
         >
-          حفظ الكل
+          <Loader v-if="isLoading" class="animate-spin" />
+          <span v-else> حفظ الكل </span>
         </Button>
       </div>
     </main>

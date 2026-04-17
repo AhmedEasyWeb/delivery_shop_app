@@ -24,7 +24,7 @@ const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
 const totalPages = computed(() =>
-  Math.ceil(props.totalItems / props.itemsPerPage)
+  Math.ceil(props.totalItems / props.itemsPerPage),
 );
 
 const visiblePages = computed(() => {
@@ -55,7 +55,7 @@ const visiblePages = computed(() => {
 const showFirstEllipsis = computed(() => visiblePages.value[0] ?? 0 > 1);
 const showLastEllipsis = computed(
   () =>
-    (visiblePages.value[visiblePages.value.length - 1] ?? 0) < totalPages.value
+    (visiblePages.value[visiblePages.value.length - 1] ?? 0) < totalPages.value,
 );
 
 function goToPage(page: number) {
@@ -90,7 +90,12 @@ function goToPage(page: number) {
           as-child
         >
           <Button
-            class="w-10 h-10 p-0 text-black"
+            class="w-10 h-10 p-0 transition-colors duration-200"
+            :class="
+              currentPage === pageNum
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-white text-black hover:bg-muted/50'
+            "
             :variant="currentPage === pageNum ? 'default' : 'outline'"
             @click="goToPage(pageNum)"
           >

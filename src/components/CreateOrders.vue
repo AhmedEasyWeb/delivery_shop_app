@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Input } from "@/components/ui/input";
-// import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -28,12 +27,13 @@ import {
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
+
 const isCreateOrderOpen = ref(false);
 const receiptImage = ref<File | null>(null);
 const receiptPreview = ref<string | null>(null);
 const loading = ref(false);
 const newOrder = ref({
-  customerPhone: "",
+  customerPhone: "+2",
   totalAmount: 0,
   order_city: "",
   payment_method: "",
@@ -53,6 +53,7 @@ const handleReceiptUpload = (event: Event) => {
 };
 
 async function fetchCities() {
+  if (!auth.user?.restaurant_id) return;
   try {
     const restaurantRes = await api.get(
       `/restaurants/${auth.user.restaurant_id}/cities`,
@@ -68,9 +69,11 @@ const handleCreateOrder = async () => {
   loading.value = true;
 
   const formData = new FormData();
-  const getDeliveryCost = deliveryAreas.value.filter((area: any) => {
-    return area.city === newOrder.value.order_city;
-  })[0].deliveryCost;
+  // Safe filtering: gracefully handle area finding to avoid TypeError
+  const selectedArea = deliveryAreas.value.find(
+    (area: any) => area.city === newOrder.value.order_city,
+  );
+  const getDeliveryCost = selectedArea ? selectedArea.deliveryCost : 0;
 
   formData.append("customerPhone", newOrder.value.customerPhone);
   formData.append("totalAmount", newOrder.value.totalAmount.toString());
@@ -88,20 +91,19 @@ const handleCreateOrder = async () => {
     toast.success("تم إنشاء الطلب بنجاح");
 
     newOrder.value = {
-      customerPhone: "",
+      customerPhone: "+2",
       totalAmount: 0,
       order_city: "",
       payment_method: "",
     };
     receiptImage.value = null;
     receiptPreview.value = null;
+    isCreateOrderOpen.value = false;
   } catch (err: any) {
     toast.error(err.message || "فشل في إنشاء الطلب");
   } finally {
     loading.value = false;
   }
-
-  isCreateOrderOpen.value = false;
 };
 
 const handleClickOutside = (event: MouseEvent) => {

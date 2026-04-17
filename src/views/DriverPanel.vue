@@ -24,29 +24,12 @@ import {
   DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { toast } from "vue-sonner";
-import api from "@/api/axios";
-
 const openWorkInstructions = ref(false);
 
-const { isOnline, goOnline, goOffline, handleChangeCity } = useDriverTracker();
+const { isOnline, goOnline, goOffline } = useDriverTracker();
 const authStore = useAuthStore();
 const router = useRouter();
 const activeTab = ref("current-orders");
-const city = ref(authStore.driver?.driver_city || "");
-const cities = ref<{ city_id: number; city_name: string }[]>([]);
-
-async function fetchCities() {
-  try {
-    const resp = await api.get("/cities", {
-      params: { driver_id: authStore.driver?.driver_id },
-    });
-    cities.value = resp.data;
-  } catch (err: any) {
-    console.error("fetchCities error:", err);
-    toast.error("فشل تحميل المدن");
-  }
-}
 
 const refreshData = async () => {
   await goOffline();
@@ -59,7 +42,6 @@ onMounted(async () => {
     authStore.logout();
     router.push("/");
   }
-  await fetchCities();
   openWorkInstructions.value = true;
 });
 </script>
@@ -122,50 +104,6 @@ onMounted(async () => {
         </div>
       </div>
     </header>
-
-    <section class="p-4 max-w-md mx-auto">
-      <div
-        class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex items-center gap-3"
-      >
-        <div class="bg-blue-50 p-2 rounded-lg">
-          <MapPin class="w-5 h-5 text-blue-600" />
-        </div>
-
-        <div class="flex-1">
-          <Select v-model="city">
-            <SelectTrigger
-              class="border-none shadow-none h-auto p-0 focus:ring-0 text-slate-900 font-bold"
-            >
-              <SelectValue placeholder="اختر المدينة" />
-            </SelectTrigger>
-            <SelectContent class="rounded-2xl border-none shadow-2xl">
-              <SelectGroup>
-                <SelectLabel class="text-slate-400 text-xs"
-                  >المدن المتاحة</SelectLabel
-                >
-                <SelectItem
-                  v-for="cityItem in cities"
-                  :key="cityItem.city_id"
-                  :value="cityItem.city_name"
-                  class="rounded-xl my-1 font-bold"
-                >
-                  {{ cityItem.city_name }}
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Button
-          @click="handleChangeCity(city)"
-          variant="secondary"
-          size="sm"
-          class="rounded-xl font-bold bg-slate-100 text-slate-700 hover:bg-slate-200"
-        >
-          تغيير
-        </Button>
-      </div>
-    </section>
 
     <Dialog v-model:open="openWorkInstructions">
       <DialogContent

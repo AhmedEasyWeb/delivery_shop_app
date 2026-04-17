@@ -3,7 +3,7 @@ import EditOrders from "@/components/EditOrders.vue";
 import RestaurantDriverMap from "@/components/RestaurantDriverMap.vue";
 import { computed, onMounted, ref, watch } from "vue";
 import { Clock, CheckCircle } from "lucide-vue-next";
-import RestaurantsHeader from "@/components/RestaurantsHeader.vue";
+import Header from "@/components/Header.vue";
 import OrderCard from "@/components/OrderCard.vue";
 import {
   Card,
@@ -12,7 +12,7 @@ import {
   CardContent,
   CardDescription,
 } from "@/components/ui/card";
-import { useWebRestaurantSocket } from "@/composables/useWebSocket";
+import { useWebSocket } from "@/composables/useWebSocket";
 import api from "@/api/axios";
 import type { Order } from "@/types";
 import { useAuthStore } from "@/stores/auth";
@@ -37,13 +37,13 @@ const handleShowDriverLocation = (driverId: number) => {
   showDriverMap.value = true;
 };
 
-const { messages, sendMessage } = useWebRestaurantSocket(auth.user?.id || 0);
+const { messages, sendMessage } = useWebSocket(auth.user?.restaurant_id || 0);
 
 const currentPage = ref(1);
 const itemsPerPage = ref(50);
 
 const totalPages = computed(() =>
-  Math.ceil(status.value.sum_of_orders / itemsPerPage.value),
+  Math.ceil((status.value.sum_of_orders || 0) / itemsPerPage.value),
 );
 
 const fetchTodayOrders = async () => {
@@ -53,9 +53,9 @@ const fetchTodayOrders = async () => {
 
   try {
     const res = await api.get(`/orders?from=${today}&to=${today}`);
-    orders.value = res.data.orders;
+    orders.value = res.data.orders || [];
   } catch (err: any) {
-    error.value = err.message || "Failed to fetch restaurants";
+    error.value = err.message || "Failed to fetch orders";
   } finally {
     loading.value = false;
   }
@@ -71,7 +71,6 @@ const fetchStats = async () => {
       `/orders?from=${today}&to=${today}&status=true&page=${currentPage.value}`,
     );
     status.value = res.data.stats || {};
-    console.log("Status:", res.data.stats);
   } catch (err: any) {
     console.error("Failed to fetch stats:", err);
   } finally {
@@ -87,38 +86,51 @@ onMounted(async () => {
   startTimers();
 });
 
+let processedMessagesCount = 0;
+
 watch(
-  messages,
-  (newMessages) => {
-    const last = newMessages[newMessages.length - 1];
-    if (!last) return;
-
-    if (last.type === "new_order") {
-      toast.success("تم انشاء طلب جديد!");
-      orders.value.push(last.order);
+  () => messages.value.length,
+  (newLength) => {
+    if (newLength === 0) {
+      processedMessagesCount = 0;
+      return;
     }
 
-    if (last.type === "updated_order") {
-      orders.value = orders.value.map((order) => {
-        if (order.order_id === last.order.order_id) {
-          console.log("Updating order:", last.order, order);
-          order = last.order;
+    for (let i = processedMessagesCount; i < newLength; i++) {
+      const msg = messages.value[i];
+      if (!msg) continue;
+
+      if (msg.type === "new_order" && msg.order) {
+        toast.success("تم انشاء طلب جديد!");
+        if (!orders.value.find((o) => o.order_id === msg.order.order_id)) {
+          orders.value = [msg.order, ...orders.value];
         }
-        return order;
-      });
+      }
+
+      if (msg.type === "updated_order" && msg.order) {
+        toast.success(`تم تحديث بيانات الطلب رقم ${msg.order.order_id}`);
+        orders.value = orders.value.map((order) =>
+          order.order_id === msg.order.order_id
+            ? { ...order, ...msg.order }
+            : order,
+        );
+      }
+
+      if (msg.type === "order_status_updated" && msg.order) {
+        toast.info(
+          `تغيرت حالة الطلب رقم ${msg.order.order_id} إلى: ${msg.order.order_status}`,
+        );
+        orders.value = orders.value.map((order) =>
+          order.order_id === msg.order.order_id
+            ? { ...order, order_status: msg.order.order_status }
+            : order,
+        );
+      }
     }
 
-    if (last.type === "order_status_updated") {
-      console.log("Order status updated:", last.order);
-      orders.value = orders.value.map((order) => {
-        if (order.order_id === last.order.order_id) {
-          order.order_status = last.order.order_status;
-        }
-        return order;
-      });
-    }
+    processedMessagesCount = newLength;
   },
-  { immediate: true, deep: true },
+  { immediate: true },
 );
 
 watch(
@@ -136,7 +148,7 @@ watch(
 );
 </script>
 <template>
-  <RestaurantsHeader />
+  <Header />
   <div class="p-6" dir="rtl">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       <Card>

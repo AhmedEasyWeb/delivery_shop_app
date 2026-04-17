@@ -16,6 +16,15 @@ export const useOrdersStore = defineStore("orders", () => {
     toast.success("تم إضافة طلب جديد");
   }
 
+  function addOrders(newOrders: Order[]) {
+    newOrders.forEach((order) => {
+      if (!orders.value.find((o) => o.order_id === order.order_id)) {
+        orders.value.unshift(order);
+      }
+    });
+    toast.success(`تم إضافة ${newOrders.length} طلبات جديدة`);
+  }
+
   function removeOrder(orderId: number) {
     orders.value = orders.value.filter((order) => order.order_id !== orderId);
     toast.warning("تم حذف الطلب");
@@ -54,6 +63,7 @@ export const useOrdersStore = defineStore("orders", () => {
   return {
     orders,
     addOrder,
+    addOrders,
     removeOrder,
     updateOrder,
     updateOrderStatus,

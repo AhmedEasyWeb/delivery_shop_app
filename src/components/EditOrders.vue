@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
 import {
   Dialog,
   DialogContent,
@@ -13,8 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { Order } from "@/types";
+import api from "@/api/axios";
 import { toast } from "vue-sonner";
-import { httpRequest } from "@/utils/http";
 
 interface Props {
   open: boolean;
@@ -23,6 +23,7 @@ interface Props {
 
 interface Emits {
   (e: "update:open", value: boolean): void;
+  (e: "update"): void;
 }
 
 const props = defineProps<Props>();
@@ -34,6 +35,18 @@ const formData = ref({
   order_delivery_cost: 0,
   notes: "",
   restaurant_id: 0,
+});
+
+const canEditPrice = computed(() => {
+  if (!props.order?.created_at) return false;
+  // Handle both ISO strings and standard SQLite 2024-01-01 12:00:00 format
+  const createdAtStr = props.order.created_at.includes("T")
+    ? props.order.created_at
+    : props.order.created_at.replace(" ", "T");
+  const created = new Date(createdAtStr);
+  const now = new Date();
+  const diffInMinutes = (now.getTime() - created.getTime()) / (1000 * 60);
+  return diffInMinutes >= 5;
 });
 
 watch(
@@ -48,7 +61,7 @@ watch(
       };
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const handleClose = () => {
@@ -61,13 +74,10 @@ const handleSubmit = async () => {
   loading.value = true;
 
   try {
-    await httpRequest({
-      url: `/api/orders/${props.order.order_id}`,
-      method: "PUT",
-      data: formData.value,
-    });
+    await api.put(`/orders/${props.order.order_id}`, formData.value);
 
     toast.success("تم تحديث الطلب بنجاح!");
+    emit("update");
     handleClose();
   } catch (err: any) {
     toast.error(err.response?.data?.message || "فشل تحديث الطلب");
@@ -89,23 +99,25 @@ const handleSubmit = async () => {
 
       <div class="grid gap-4 py-4">
         <div class="grid gap-2">
-          <Label for="order_delivery_cost">تكلفة توصيل</Label>
-          <Input
-            id="order_delivery_cost"
-            type="number"
-            v-model="formData.order_delivery_cost"
-            placeholder="أدخل تكلفة توصيل الطلب (ج.م)"
-          />
-        </div>
-
-        <div class="grid gap-2">
-          <Label for="order_total_price">إجمالي السعر (ج.م)</Label>
+          <Label
+            for="order_total_price"
+            :class="{ 'opacity-50': !canEditPrice }"
+          >
+            إجمالي السعر (ج.م)
+            <span
+              v-if="!canEditPrice"
+              class="text-xs text-orange-500 font-normal"
+            >
+              (متاح التعديل بعد 5 دقائق من إنشاء الطلب)
+            </span>
+          </Label>
           <Input
             id="order_total_price"
             v-model.number="formData.order_total_price"
             type="number"
             step="0.01"
             placeholder="0.00"
+            :disabled="!canEditPrice"
           />
         </div>
 
