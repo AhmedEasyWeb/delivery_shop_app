@@ -6,9 +6,10 @@ import { Button } from "./ui/button";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Navigation, Phone, Clock, Wallet, FileText, X } from "lucide-vue-next";
 import { onBeforeUnmount, onMounted, ref } from "vue";
-import { httpRequest } from "@/utils/http";
+import api from "@/api/axios";
 import ReportRestaurantForm from "@/components/ReportRestaurantForm.vue";
 import baseUrl from "@/utils/baseUrl";
+import { toast } from "vue-sonner";
 import {
   getPaymentMethod,
   getStatus,
@@ -101,34 +102,42 @@ const handleOrderPickedUp = async (orderId: string) => {
   try {
     const photo = await Camera.getPhoto({
       quality: 40,
-      resultType: CameraResultType.Base64,
+      resultType: CameraResultType.Uri,
       allowEditing: false,
       source: CameraSource.Camera,
-      promptLabelHeader: "تأكيد الهوية بالسيلفي",
+      promptLabelHeader: "تأكيد استلام الطلب",
     });
 
-    if (photo.base64String) {
-      httpRequest({
-        url: `/api/driver/update_order/${orderId}`,
-        method: "PUT",
-        data: {
-          order_status: "picked-up",
-          photo: `data:image/jpeg;base64,${photo.base64String}`,
+    if (photo.webPath) {
+      const response = await fetch(photo.webPath);
+      const blob = await response.blob();
+
+      const formData = new FormData();
+      formData.append("order_status", "picked-up");
+      formData.append("photo", blob, `order_${orderId}.jpg`);
+
+      await api.put(`/driver/update_order/${orderId}`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
         },
       });
+
+      toast.success("تم استلام الطلب بنجاح!");
     }
   } catch (error) {
     console.error("Error taking photo or updating order status:", error);
-    alert("Failed to take photo or update order status.");
+    toast.error("فشل في استلام الطلب.");
   }
 };
 
-const handleOrderDelivered = (orderId: string) => {
-  httpRequest({
-    url: `/api/driver/order_delivered/${orderId}`,
-    method: "PUT",
-    data: {},
-  });
+const handleOrderDelivered = async (orderId: string) => {
+  try {
+    await api.put(`/driver/order_delivered/${orderId}`, {});
+    toast.success("تم توصيل الطلب بنجاح!");
+  } catch (error) {
+    console.error("Error updating order status:", error);
+    toast.error("فشل في تحديث حالة الطلب.");
+  }
 };
 
 onMounted(() => {
