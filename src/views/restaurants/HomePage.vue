@@ -2,7 +2,7 @@
 import EditOrders from "@/components/EditOrders.vue";
 import RestaurantDriverMap from "@/components/RestaurantDriverMap.vue";
 import { computed, onMounted, ref, watch } from "vue";
-import { Clock, CheckCircle } from "lucide-vue-next";
+import { Clock, CheckCircle, MessageCircle } from "lucide-vue-next";
 import Header from "@/components/Header.vue";
 import OrderCard from "@/components/OrderCard.vue";
 import {
@@ -146,6 +146,12 @@ watch(
   },
   { immediate: true, deep: true },
 );
+
+function redirectToWhatsApp(phone: string) {
+  const cleanPhone = phone.replace(/\D/g, "");
+  const whatsappUrl = `https://wa.me/${cleanPhone}`;
+  window.open(whatsappUrl, "_blank");
+}
 </script>
 <template>
   <Header />
@@ -233,4 +239,13 @@ watch(
     :messages="messages"
     :sendMessage="sendMessage"
   />
+
+  <!-- WhatsApp Support Button -->
+  <button
+    @click="redirectToWhatsApp('+201214555193')"
+    class="fixed bottom-6 left-6 z-50 flex items-center gap-2 bg-[#25D366] text-white px-4 py-3 rounded-full shadow-lg hover:bg-[#128C7E] active:scale-95 transition-all outline-none"
+  >
+    <MessageCircle class="h-5 w-5" />
+    <span class="font-medium text-sm">تواصل مع الدعم</span>
+  </button>
 </template>

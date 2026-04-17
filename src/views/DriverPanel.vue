@@ -1,22 +1,14 @@
 <script setup lang="ts">
 import { useDriverTracker } from "@/composables/useDriverTraker";
-import { computed, onMounted, ref, watch } from "vue";
+import { onMounted, ref } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "vue-router";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Wifi, WifiOff, MapPin, Info } from "lucide-vue-next";
+import { RefreshCw, Wifi, WifiOff, Info, MessageCircle } from "lucide-vue-next";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrderHistory from "@/components/OrderHistory.vue";
 import DriverTab from "@/components/DriverTab.vue";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  SelectLabel,
-  SelectGroup,
-} from "@/components/ui/select";
+
 import {
   Dialog,
   DialogContent,
@@ -44,6 +36,12 @@ onMounted(async () => {
   }
   openWorkInstructions.value = true;
 });
+
+function redirectToWhatsApp(phone: string) {
+  const cleanPhone = phone.replace(/\D/g, "");
+  const whatsappUrl = `https://wa.me/${cleanPhone}`;
+  window.open(whatsappUrl, "_blank");
+}
 </script>
 
 <template>
@@ -155,6 +153,16 @@ onMounted(async () => {
     </Dialog>
 
     <main class="max-w-md mx-auto">
+      <div class="px-4 py-2">
+        <Button
+          @click="redirectToWhatsApp('+201214555196')"
+          class="w-full h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black shadow-lg shadow-emerald-100 flex items-center justify-center gap-2"
+        >
+          <MessageCircle class="w-5 h-5" />
+          تواصل مع الدعم الفني
+        </Button>
+      </div>
+
       <Tabs
         v-model="activeTab"
         dir="rtl"
