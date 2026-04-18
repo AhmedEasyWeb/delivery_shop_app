@@ -128,9 +128,7 @@ watch(
             class="p-2.5 bg-white shadow-sm border border-slate-100 rounded-full text-slate-600 hover:text-red-600 active:scale-95 transition-all"
             :disabled="isRefreshing"
           >
-            <RefreshCw
-              :class="['w-5 h-5', { 'animate-spin': isRefreshing }]"
-            />
+            <RefreshCw :class="['w-5 h-5', { 'animate-spin': isRefreshing }]" />
           </button>
           <span
             class="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded-full"

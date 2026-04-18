@@ -15,7 +15,6 @@ import {
 } from "lucide-vue-next";
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import api from "@/api/axios";
-import ReportRestaurantForm from "@/components/ReportRestaurantForm.vue";
 import baseUrl from "@/utils/baseUrl";
 import { toast } from "vue-sonner";
 import { useOrdersStore } from "@/stores/orders";
@@ -41,15 +40,35 @@ let interval: any = null;
 const isModalOpen = ref(false);
 const selectedImageUrl = ref("");
 
-function startTimer(createdAt: string) {
-  const start = new Date(createdAt).getTime();
+function startTimer(createdAt: string | null) {
+  if (interval) clearInterval(interval);
+  if (!createdAt) {
+    timer.value = "00:00";
+    timerColor.value = "text-green-600";
+    return;
+  }
+
+  // Ensure SQL date string is compatible with all browsers (Capacitor/iOS/Android)
+  const formattedDate = createdAt.includes("T")
+    ? createdAt
+    : createdAt.replace(" ", "T");
+  const start = new Date(formattedDate).getTime();
+
+  if (isNaN(start)) {
+    timer.value = "00:00";
+    timerColor.value = "text-green-600";
+    return;
+  }
 
   interval = setInterval(() => {
     const now = Date.now();
     const diff = Math.floor((now - start) / 1000);
 
-    const minutes = Math.floor(diff / 60);
-    const seconds = diff % 60;
+    // Guard against negative diffs (clock sync issues)
+    const positiveDiff = Math.max(0, diff);
+
+    const minutes = Math.floor(positiveDiff / 60);
+    const seconds = positiveDiff % 60;
 
     timer.value = `${String(minutes).padStart(2, "0")}:${String(
       seconds,
@@ -146,7 +165,7 @@ const handleOrderDelivered = async (orderId: string) => {
   try {
     const res = await api.put(`/driver/order_delivered/${orderId}`, {});
     if (res.data.success) {
-      useOrdersStore().updateOrderStatus(Number(orderId), "delivered");
+      useOrdersStore().updateOrder(res.data.order);
       toast.success("تم توصيل الطلب بنجاح!");
     }
   } catch (error) {
@@ -155,34 +174,28 @@ const handleOrderDelivered = async (orderId: string) => {
   }
 };
 
+const initTimer = (status: string) => {
+  if (status === "preparing") {
+    startTimer(props.order.created_at);
+  } else if (status === "ready") {
+    startTimer(props.order.ready_at);
+  } else if (status === "picked-up") {
+    startTimer(props.order.picked_up_at);
+  } else {
+    if (interval) clearInterval(interval);
+    timer.value = "00:00";
+  }
+};
+
 watch(
   () => props.order.order_status,
   (newStatus) => {
-    if (interval) clearInterval(interval);
-    if (newStatus === "preparing") {
-      startTimer(props.order.created_at);
-    }
-    if (newStatus === "ready") {
-      startTimer(props.order.ready_at);
-    }
-    if (newStatus === "picked-up") {
-      startTimer(props.order.picked_up_at);
-    }
+    initTimer(newStatus);
   },
 );
 
 onMounted(() => {
-  if (props.order.order_status === "preparing") {
-    startTimer(props.order.created_at);
-  }
-
-  if (props.order.order_status === "ready") {
-    startTimer(props.order.ready_at);
-  }
-
-  if (props.order.order_status === "picked-up") {
-    startTimer(props.order.picked_up_at);
-  }
+  initTimer(props.order.order_status);
 });
 
 onBeforeUnmount(() => {

@@ -291,7 +291,11 @@ export function useDriverTracker() {
             sendFreeDriverWs();
             return;
           }
-          ordersStore.updateOrderStatus(orderId, orderStatus);
+          if (data.order) {
+            ordersStore.updateOrder(data.order);
+          } else {
+            ordersStore.updateOrderStatus(orderId, orderStatus);
+          }
         }
       } catch (err) {
         console.error("❌ Failed to handle WS message:", err);
