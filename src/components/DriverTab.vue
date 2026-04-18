@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { Wallet, CheckCircle2, Star, TrendingUp, Radar } from "lucide-vue-next";
+import {
+  Wallet,
+  CheckCircle2,
+  Star,
+  TrendingUp,
+  Radar,
+  RefreshCw,
+} from "lucide-vue-next";
 import { Card, CardContent } from "./ui/card";
 import { useAuthStore } from "@/stores/auth";
 import DriverOrders from "@/components/DriverOrders.vue";
@@ -13,9 +20,11 @@ const ordersStore = useOrdersStore();
 const completedToday = ref(0);
 const todayEarnings = ref(0);
 const orders = computed(() => ordersStore.orders);
+const isRefreshing = ref(false);
 
 async function getDriverData() {
   try {
+    isRefreshing.value = true;
     const res = await api.get(`/driver/${authStore.driver?.driver_id}`);
 
     completedToday.value = res.data.status.completedToday;
@@ -23,6 +32,8 @@ async function getDriverData() {
     ordersStore.orders = res.data.orders;
   } catch (err: any) {
     console.error("Failed to fetch driver data:", err);
+  } finally {
+    isRefreshing.value = false;
   }
 }
 
@@ -111,10 +122,21 @@ watch(
             class="flex h-2 w-2 rounded-full bg-red-500 animate-pulse"
           ></span>
         </h2>
-        <span
-          class="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded-full"
-          >مباشر الآن</span
-        >
+        <div class="flex items-center gap-3">
+          <button
+            @click="getDriverData"
+            class="p-2.5 bg-white shadow-sm border border-slate-100 rounded-full text-slate-600 hover:text-red-600 active:scale-95 transition-all"
+            :disabled="isRefreshing"
+          >
+            <RefreshCw
+              :class="['w-5 h-5', { 'animate-spin': isRefreshing }]"
+            />
+          </button>
+          <span
+            class="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded-full"
+            >مباشر الآن</span
+          >
+        </div>
       </div>
 
       <div
