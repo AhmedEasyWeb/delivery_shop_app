@@ -8,7 +8,17 @@ import { toast } from "vue-sonner";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { Device } from "@capacitor/device";
-import { MapPin, ArrowRight, Bike, Lock, Camera } from "lucide-vue-next";
+import {
+  MapPin,
+  ArrowRight,
+  Bike,
+  Lock,
+  Camera,
+  User,
+  CheckCircle2,
+  Upload,
+  Loader2,
+} from "lucide-vue-next";
 
 const loading = ref(false);
 const cities = ref<{ city_id: number; city_name: string }[]>([]);
@@ -129,9 +139,10 @@ const handleSubmit = async () => {
     if (response.data.success) {
       toast.success("تم التسجيل بنجاح");
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
-    toast.error("لقد حدث خطأ ما");
+    const message = err.response?.data?.message || "لقد حدث خطأ ما";
+    toast.error(message);
   } finally {
     loading.value = false;
   }

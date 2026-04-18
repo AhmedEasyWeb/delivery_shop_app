@@ -4,12 +4,21 @@ import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { Navigation, Phone, Clock, Wallet, FileText, X } from "lucide-vue-next";
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import {
+  Navigation,
+  Phone,
+  Clock,
+  Wallet,
+  FileText,
+  X,
+  MessageCircle,
+} from "lucide-vue-next";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import api from "@/api/axios";
 import ReportRestaurantForm from "@/components/ReportRestaurantForm.vue";
 import baseUrl from "@/utils/baseUrl";
 import { toast } from "vue-sonner";
+import { useOrdersStore } from "@/stores/orders";
 import {
   getPaymentMethod,
   getStatus,
@@ -116,13 +125,16 @@ const handleOrderPickedUp = async (orderId: string) => {
       formData.append("order_status", "picked-up");
       formData.append("photo", blob, `order_${orderId}.jpg`);
 
-      await api.put(`/driver/update_order/${orderId}`, formData, {
+      const res = await api.put(`/driver/update_order/${orderId}`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
 
-      toast.success("تم استلام الطلب بنجاح!");
+      if (res.data.success) {
+        useOrdersStore().updateOrder(res.data.order);
+        toast.success("تم استلام الطلب بنجاح!");
+      }
     }
   } catch (error) {
     console.error("Error taking photo or updating order status:", error);
@@ -132,13 +144,32 @@ const handleOrderPickedUp = async (orderId: string) => {
 
 const handleOrderDelivered = async (orderId: string) => {
   try {
-    await api.put(`/driver/order_delivered/${orderId}`, {});
-    toast.success("تم توصيل الطلب بنجاح!");
+    const res = await api.put(`/driver/order_delivered/${orderId}`, {});
+    if (res.data.success) {
+      useOrdersStore().updateOrderStatus(Number(orderId), "delivered");
+      toast.success("تم توصيل الطلب بنجاح!");
+    }
   } catch (error) {
     console.error("Error updating order status:", error);
     toast.error("فشل في تحديث حالة الطلب.");
   }
 };
+
+watch(
+  () => props.order.order_status,
+  (newStatus) => {
+    if (interval) clearInterval(interval);
+    if (newStatus === "preparing") {
+      startTimer(props.order.created_at);
+    }
+    if (newStatus === "ready") {
+      startTimer(props.order.ready_at);
+    }
+    if (newStatus === "picked-up") {
+      startTimer(props.order.picked_up_at);
+    }
+  },
+);
 
 onMounted(() => {
   if (props.order.order_status === "preparing") {
