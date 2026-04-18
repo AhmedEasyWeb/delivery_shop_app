@@ -345,11 +345,6 @@ onBeforeUnmount(() => {
         >
           تم التوصيل
         </Button>
-
-        <ReportRestaurantForm
-          v-if="props.order.order_status === 'delivered'"
-          :restaurant-name="props.order.restaurant.restaurant_name"
-        />
       </div>
     </CardContent>
   </Card>

@@ -263,13 +263,13 @@ export function useDriverTracker() {
           if (data.orders.length > 0) {
             showOrderNotification(data.orders[0]);
           }
-          
+
           data.orders.forEach((order: any) => {
             sendUpdateOrdersWs(order.order_id, order.restaurant_id);
           });
 
           ordersStore.addOrders(data.orders);
-          
+
           if (data.orders.length > 0) {
             authStore.setStationedAt(data.orders[0].restaurant_id);
           }
@@ -280,15 +280,18 @@ export function useDriverTracker() {
         }
 
         if (data.type === "order_status_updated") {
-          if (data.order_status === "ready") {
-            showUpdateOrderNotification(data.order_id);
+          const orderId = data.order_id || data.order?.order_id;
+          const orderStatus = data.order_status || data.order?.order_status;
+
+          if (orderStatus === "ready") {
+            showUpdateOrderNotification(orderId);
           }
-          if (data.order_status === "delivered") {
-            ordersStore.removeOrder(data.order_id);
+          if (orderStatus === "delivered" || orderStatus === "canceled") {
+            ordersStore.removeOrder(orderId);
             sendFreeDriverWs();
             return;
           }
-          ordersStore.updateOrderStatus(data.order_id, data.order_status);
+          ordersStore.updateOrderStatus(orderId, orderStatus);
         }
       } catch (err) {
         console.error("❌ Failed to handle WS message:", err);
@@ -366,7 +369,11 @@ export function useDriverTracker() {
 
     pingInterval = setInterval(() => {
       // Reconnect WebSocket if it dropped while in background
-      if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+      if (
+        !ws ||
+        ws.readyState === WebSocket.CLOSED ||
+        ws.readyState === WebSocket.CLOSING
+      ) {
         console.warn("💓 Heartbeat: WebSocket is dead, reconnecting...");
         connectWebSocket();
         return;
