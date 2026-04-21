@@ -4,7 +4,15 @@ import { onMounted, ref } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "vue-router";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Wifi, WifiOff, Info, MessageCircle } from "lucide-vue-next";
+import {
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  Info,
+  MessageCircle,
+  Battery,
+  BatteryWarning,
+} from "lucide-vue-next";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrderHistory from "@/components/OrderHistory.vue";
 import DriverTab from "@/components/DriverTab.vue";
@@ -17,6 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 const openWorkInstructions = ref(false);
+const showBatteryModal = ref(false);
 
 const { isOnline, goOnline, goOffline } = useDriverTracker();
 const authStore = useAuthStore();
@@ -47,7 +56,7 @@ function redirectToWhatsApp(phone: string) {
 <template>
   <div class="min-h-screen bg-slate-50 font-sans" dir="rtl">
     <header
-      class="bg-white px-4 py-4 shadow-sm border-b border-slate-100 sticky top-0 z-30"
+      class="bg-white px-4 py-4 shadow-sm border-b border-slate-100 sticky top-0 z-30 safe-pt"
     >
       <div class="max-w-md mx-auto flex items-center justify-between">
         <div class="flex items-center gap-3">
@@ -152,14 +161,75 @@ function redirectToWhatsApp(phone: string) {
       </DialogContent>
     </Dialog>
 
+    <Dialog v-model:open="showBatteryModal">
+      <DialogContent
+        class="w-[90%] rounded-4xl p-6 border-none shadow-2xl"
+        dir="rtl"
+      >
+        <DialogHeader class="text-right">
+          <div
+            class="bg-blue-50 w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+          >
+            <BatteryWarning class="text-blue-600 w-6 h-6" />
+          </div>
+          <DialogTitle class="text-xl font-black text-slate-900"
+            >تحسين أداء التتبع</DialogTitle
+          >
+        </DialogHeader>
+
+        <div class="space-y-4 py-4">
+          <p class="text-slate-500 text-sm font-medium">
+            لضمان استمرار تتبع موقعك بشكل دقيق حتى عند إغلاق الشاشة، يرجى ضبط
+            إعدادات البطارية:
+          </p>
+          <div
+            v-for="(step, index) in [
+              'اذهب إلى إعدادات الهاتف (Settings)',
+              'اختر التطبيقات (Apps)',
+              'ابحث عن تطبيق DeliveryShop وافتحه',
+              'اختر البطارية (Battery)',
+              'حدد خيار غير مقيد (Unrestricted)',
+            ]"
+            :key="index"
+            class="flex gap-3 items-start"
+          >
+            <div
+              class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0"
+            >
+              {{ index + 1 }}
+            </div>
+            <p class="text-slate-600 font-bold text-sm leading-relaxed">
+              {{ step }}
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            class="w-full h-12 rounded-2xl bg-slate-900 font-black text-white"
+            @click="showBatteryModal = false"
+          >
+            حسناً، سأفعل ذلك
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     <main class="max-w-md mx-auto">
-      <div class="px-4 py-2">
+      <div class="px-4 py-2 grid grid-cols-2 gap-2">
         <Button
           @click="redirectToWhatsApp('+201214555196')"
           class="w-full h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black shadow-lg shadow-emerald-100 flex items-center justify-center gap-2"
         >
           <MessageCircle class="w-5 h-5" />
-          تواصل مع الدعم الفني
+          الدعم الفني
+        </Button>
+        <Button
+          @click="showBatteryModal = true"
+          class="w-full h-12 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-black shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
+        >
+          <Battery class="w-5 h-5" />
+          ضبط البطارية
         </Button>
       </div>
 

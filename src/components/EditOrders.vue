@@ -104,10 +104,7 @@ const handleSubmit = async () => {
             :class="{ 'opacity-50': !canEditPrice }"
           >
             إجمالي السعر (ج.م)
-            <span
-              v-if="!canEditPrice"
-              class="text-xs text-orange-500 font-normal"
-            >
+            <span v-if="!canEditPrice" class="text-xs text-orange-500 font-normal">
               (متاح التعديل بعد 5 دقائق من إنشاء الطلب)
             </span>
           </Label>

@@ -37,6 +37,7 @@
     "clsx": "^2.1.1",
     "cordova-plugin-background-mode": "^0.7.3",
     "cordova-plugin-device": "3.0.0",
+    "dayjs": "^1.11.20",
     "leaflet": "^1.9.4",
     "lucide-vue-next": "^0.548.0",
     "pinia": "^3.0.3",

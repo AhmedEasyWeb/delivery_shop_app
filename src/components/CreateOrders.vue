@@ -66,6 +66,17 @@ async function fetchCities() {
 }
 
 const handleCreateOrder = async () => {
+  if (
+    !newOrder.value.customerPhone ||
+    newOrder.value.customerPhone === "+2" ||
+    !newOrder.value.order_city ||
+    !newOrder.value.payment_method ||
+    !receiptImage.value
+  ) {
+    toast.error("يرجى ملء جميع الحقول المطلوبة بما في ذلك صورة الفاتورة");
+    return;
+  }
+
   loading.value = true;
 
   const formData = new FormData();
@@ -145,7 +156,7 @@ watch(isCreateOrderOpen, (isOpen) => {
 
       <div dir="rtl" class="grid gap-4 py-4 relative">
         <div class="space-y-2">
-          <Label for="receiptImage">صورة الفاتورة (اختياري)</Label>
+          <Label for="receiptImage">صورة الفاتورة (مطلوب)</Label>
           <Input
             id="receiptImage"
             type="file"
@@ -230,6 +241,7 @@ watch(isCreateOrderOpen, (isOpen) => {
             id="customerPhone"
             type="tel"
             placeholder="01212158465"
+            required
           />
         </div>
       </div>
@@ -241,7 +253,14 @@ watch(isCreateOrderOpen, (isOpen) => {
         <Button
           class="bg-primary hover:bg-primary/90"
           @click="handleCreateOrder"
-          :disabled="!newOrder.order_city || loading"
+          :disabled="
+            !newOrder.order_city ||
+            !newOrder.payment_method ||
+            !newOrder.customerPhone ||
+            newOrder.customerPhone === '+2' ||
+            !receiptImage ||
+            loading
+          "
         >
           <Loader v-if="loading" class="animate-spin" />
           <span v-else>إنشاء الطلب</span>

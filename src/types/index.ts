@@ -5,6 +5,7 @@ export interface Order {
   order_status: string;
   order_receipt: string;
   order_notes: string;
+  order_city: string;
   driver_id?: number | null;
   restaurant_id: number;
   created_at: string;

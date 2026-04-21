@@ -15,6 +15,7 @@ import { useRouter } from "vue-router";
 import { Loader, Phone, Lock } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 
+// We use 'phone' now because the backend login query looks for the user's phone
 const phone = ref("");
 const password = ref("");
 const loading = ref(false);
@@ -30,24 +31,17 @@ onMounted(async () => {
 });
 
 async function handleLogin() {
-  if (!phone.value || !password.value) {
-    toast.error("من فضلك أدخل جميع البيانات");
-    return;
-  }
-
   loading.value = true;
-
   try {
-    const success = await auth.restaurantlogin(phone.value, password.value);
-    
-    if (success) {
-      toast.success("تم تسجيل الدخول بنجاح");
-      router.push("/restaurant/dashboard");
-    } else {
-      toast.error(auth.error || "رقم الهاتف أو كلمة المرور غير صحيحة");
-    }
+    // Ensure your auth store's login method accepts (phone, password)
+    await auth.restaurantlogin(phone.value, password.value);
+    toast.success("تم تسجيل الدخول بنجاح");
+    router.push("/restaurant/dashboard");
   } catch (err: any) {
-    toast.error("حدث خطأ غير متوقع");
+    // Specifically handle the 401/403 errors from our new backend logic
+    const errorMessage =
+      err.response?.data?.message || "رقم الهاتف أو كلمة المرور غير صحيحة";
+    toast.error(errorMessage);
   } finally {
     loading.value = false;
   }
@@ -61,15 +55,13 @@ async function handleLogin() {
   >
     <Card class="w-full max-w-md shadow-lg border-t-4 border-t-primary">
       <CardHeader class="text-center space-y-1">
-        <CardTitle class="text-2xl font-bold"> تسجيل دخول المطعم </CardTitle>
+        <CardTitle class="text-2xl font-bold">تسجيل دخول المطعم</CardTitle>
         <CardDescription>
           أدخل بيانات حسابك للمتابعة إلى لوحة التحكم
         </CardDescription>
       </CardHeader>
-
       <CardContent>
         <form class="grid gap-5" @submit.prevent="handleLogin">
-          <!-- Phone -->
           <div class="grid gap-2">
             <Label for="phone">رقم الهاتف</Label>
             <div class="relative">
@@ -87,19 +79,13 @@ async function handleLogin() {
             </div>
           </div>
 
-          <!-- Password -->
           <div class="grid gap-2">
             <div class="flex items-center justify-between">
               <Label for="password">كلمة المرور</Label>
-              <Button
-                variant="link"
-                class="px-0 font-normal text-xs h-auto"
-                type="button"
+              <Button variant="link" class="px-0 font-normal text-xs h-auto"
+                >نسيت كلمة المرور؟</Button
               >
-                نسيت كلمة المرور؟
-              </Button>
             </div>
-
             <div class="relative">
               <Lock
                 class="absolute right-3 top-3 w-4 h-4 text-muted-foreground"
@@ -115,7 +101,6 @@ async function handleLogin() {
             </div>
           </div>
 
-          <!-- Submit -->
           <Button
             type="submit"
             class="w-full h-11 text-lg font-semibold"
@@ -125,14 +110,12 @@ async function handleLogin() {
             <span v-else>دخول</span>
           </Button>
 
-          <!-- Register -->
           <div class="text-center text-sm text-muted-foreground">
             ليس لديك حساب؟
             <Button
               variant="link"
-              class="p-0 h-auto font-bold text-primary"
-              type="button"
               @click="router.push('/restaurant/register')"
+              class="p-0 h-auto font-bold text-primary"
             >
               سجل مطعمك الآن
             </Button>

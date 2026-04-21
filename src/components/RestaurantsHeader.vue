@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useAuthStore } from "@/stores/auth";
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import {
   Menu,
@@ -23,6 +23,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import CreateOrders from "./CreateOrders.vue";
+import { useWebSocket } from "@/composables/useWebSocket";
+import { useOrderTimers } from "@/composables/useOrderTimer";
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -35,6 +37,20 @@ onMounted(async () => {
     router.push("/restaurant");
   }
 });
+
+const { sendMessage, init } = useWebSocket(auth.user?.restaurant_id || 0);
+const { startTimers } = useOrderTimers(ref([]), sendMessage);
+
+watch(
+  () => auth.user?.restaurant_id,
+  (newId) => {
+    if (newId) {
+      init(newId);
+      startTimers();
+    }
+  },
+  { immediate: true },
+);
 
 const isDrawerOpen = ref(false);
 
@@ -53,7 +69,10 @@ const menuItems = [
 </script>
 
 <template>
-  <header class="flex justify-between border-b border-border bg-card" dir="rtl">
+  <header
+    class="flex justify-between border-b border-border bg-card safe-pt"
+    dir="rtl"
+  >
     <div class="flex h-16 items-center justify-between px-6">
       <div class="flex items-center gap-3">
         <img

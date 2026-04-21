@@ -1,4 +1,7 @@
 import { ref, onUnmounted } from "vue";
+import { Capacitor } from "@capacitor/core";
+import { App } from "@capacitor/app";
+import { LocalNotifications } from "@capacitor/local-notifications";
 
 // ─── Singleton state (module-level, shared across all callers) ───────────────
 const ws = ref<WebSocket | null>(null);
@@ -8,6 +11,7 @@ const messageQueue: any[] = [];
 
 let isIntentionallyClosed = false;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let pingInterval: ReturnType<typeof setInterval> | null = null;
 let activeRestaurantId: number | null = null;
 
 // Track how many composable instances are currently mounted
@@ -17,7 +21,32 @@ export const WS_URL = "wss://deliveryshop.cloud";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function notifyUser(title: string, body: string) {
+async function notifyUser(title: string, body: string) {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const perm = await LocalNotifications.checkPermissions();
+      if (perm.display !== "granted") {
+        await LocalNotifications.requestPermissions();
+      }
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            title,
+            body,
+            id: Math.floor(Math.random() * 1000000),
+            schedule: { at: new Date(Date.now() + 100) },
+            sound: "beep.wav",
+            actionTypeId: "",
+            extra: null,
+          },
+        ],
+      });
+    } catch (err) {
+      console.error("Native notification failed:", err);
+    }
+    return;
+  }
+
   if (!("Notification" in window)) {
     console.warn("This browser does not support desktop notifications.");
     return;
@@ -30,6 +59,18 @@ function notifyUser(title: string, body: string) {
       if (permission === "granted") new Notification(title, { body });
     });
   }
+}
+
+// Reconnect when app comes to foreground
+if (Capacitor.isNativePlatform()) {
+  App.addListener("appStateChange", ({ isActive }) => {
+    if (isActive && activeRestaurantId && !isIntentionallyClosed) {
+      console.log("📱 App resumed, checking WebSocket connection...");
+      if (!ws.value || ws.value.readyState !== WebSocket.OPEN) {
+        connect(activeRestaurantId);
+      }
+    }
+  });
 }
 
 // ─── Core connect (idempotent) ────────────────────────────────────────────────
@@ -47,6 +88,11 @@ function connect(id: number) {
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
+  }
+
+  if (pingInterval) {
+    clearInterval(pingInterval);
+    pingInterval = null;
   }
 
   isIntentionallyClosed = false;
@@ -68,11 +114,18 @@ function connect(id: number) {
       const queued = messageQueue.shift();
       ws.value?.send(JSON.stringify(queued));
     }
+
+    pingInterval = setInterval(() => {
+      if (ws.value?.readyState === WebSocket.OPEN) {
+        ws.value.send(JSON.stringify({ type: "ping" }));
+      }
+    }, 25000);
   };
 
   ws.value.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
+      if (data.type === "ping" || data.type === "pong") return; // ignore heartbeats
       messages.value.push(data);
       if (messages.value.length > 200) messages.value.shift();
 
@@ -91,6 +144,10 @@ function connect(id: number) {
 
   ws.value.onclose = (event) => {
     isConnected.value = false;
+    if (pingInterval) {
+      clearInterval(pingInterval);
+      pingInterval = null;
+    }
     console.warn(`⚠️ WebSocket closed (code ${event.code})`);
 
     if (!isIntentionallyClosed && activeRestaurantId !== null) {
@@ -112,6 +169,11 @@ function disconnect() {
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
+  }
+
+  if (pingInterval) {
+    clearInterval(pingInterval);
+    pingInterval = null;
   }
 
   if (ws.value) {
@@ -166,11 +228,13 @@ export function useWebSocket(restaurantId: number) {
   // Only close the socket when the LAST consumer unmounts
   onUnmounted(() => {
     consumerCount--;
-    if (consumerCount <= 0) {
-      consumerCount = 0;
-      disconnect();
-      console.log("🔌 WebSocket closed — no more consumers.");
-    }
+    setTimeout(() => {
+      if (consumerCount <= 0) {
+        consumerCount = 0;
+        disconnect();
+        console.log("🔌 WebSocket closed — no more consumers.");
+      }
+    }, 200);
   });
 
   return { ws, isConnected, messages, sendMessage, init };

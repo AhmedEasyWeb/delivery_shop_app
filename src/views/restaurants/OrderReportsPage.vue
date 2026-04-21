@@ -7,7 +7,7 @@ import {
   CardContent,
   CardDescription,
 } from "@/components/ui/card";
-import RestaurantsHeader from "@/components/RestaurantsHeader.vue";
+import Header from "@/components/Header.vue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Clock, Loader2, CheckCircle } from "lucide-vue-next";
@@ -16,7 +16,14 @@ import api from "@/api/axios";
 import type { Order } from "@/types";
 import { toast } from "vue-sonner";
 import CustomPagination from "@/components/CustomPagination.vue";
-import { getStatusColor, getStatusIcon } from "@/lib/utils";
+import {
+  getStatusColor,
+  getStatusIcon,
+  getPaymentMethod,
+  getStatus,
+  formatEGDate,
+  getEGToday,
+} from "@/lib/utils";
 
 const orders = ref<Order[]>([]);
 const loading = ref(false);
@@ -64,7 +71,7 @@ const fetchStats = async () => {
 };
 
 onMounted(async () => {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getEGToday();
   fromDate.value = today!;
   toDate.value = today!;
   await fetchOrdersByDate();
@@ -79,7 +86,7 @@ watch(currentPage, async (newPage, oldPage) => {
 </script>
 
 <template>
-  <RestaurantsHeader />
+  <Header />
 
   <div class="p-6 space-y-8" dir="rtl">
     <Card>
@@ -165,34 +172,66 @@ watch(currentPage, async (newPage, oldPage) => {
                         class="h-3 w-3"
                       />
                       <span class="ml-1 capitalize">
-                        {{ order.order_status.replace("-", " ") }}
+                        {{ getStatus(order.order_status) }}
                       </span>
+                    </Badge>
+                    <Badge
+                      v-if="order.driver_id"
+                      class="bg-blue-500/20 text-blue-600 border-blue-500/30"
+                    >
+                      تم تعيين سائق
                     </Badge>
                   </div>
                   <p class="text-sm text-muted-foreground">
-                    {{ order.created_at }}
+                    {{ formatEGDate(order.created_at) }}
                   </p>
                 </div>
-                <span class="font-bold text-lg"
-                  >{{ order.order_total_price }} ج.م</span
-                >
+                <div class="text-right">
+                  <div class="font-bold text-lg text-primary">
+                    {{ order.order_total_price }} ج.م
+                  </div>
+                  <div class="text-xs text-muted-foreground">
+                    توصيل: {{ order.order_delivery_cost || 0 }} ج.م
+                  </div>
+                </div>
               </div>
 
-              <div class="flex flex-wrap gap-4">
+              <div class="flex flex-col md:flex-row gap-4">
                 <img
                   v-if="order.order_receipt"
                   :src="'https://deliveryshop.cloud' + order.order_receipt"
                   alt="Receipt Image"
-                  class="h-36 w-36 rounded-md object-cover"
+                  class="h-32 w-32 rounded-md object-cover"
                 />
-                <div>
-                  <p class="font-medium">{{ order.user_name }} : الاسم</p>
-                  <p class="text-sm text-muted-foreground">
-                    {{ order.user_phone }} : التليفون
-                  </p>
-                  <p class="text-sm text-muted-foreground">
-                    {{ order.user_address }} : العنوان
-                  </p>
+                <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="text-xs text-muted-foreground block mb-0.5"
+                      >التليفون</label
+                    >
+                    <p class="text-sm font-medium">{{ order.user_phone }}</p>
+                  </div>
+                  <div>
+                    <label class="text-xs text-muted-foreground block mb-0.5"
+                      >العنوان</label
+                    >
+                    <p class="text-sm font-medium">
+                      {{ order.order_city || order.user_address }}
+                    </p>
+                  </div>
+                  <div>
+                    <label class="text-xs text-muted-foreground block mb-0.5"
+                      >طريقة الدفع</label
+                    >
+                    <p class="text-sm font-medium">
+                      {{ getPaymentMethod(order.payment_method) }}
+                    </p>
+                  </div>
+                  <div v-if="order.order_notes" class="sm:col-span-2">
+                    <label class="text-xs text-muted-foreground block mb-0.5"
+                      >ملاحظات</label
+                    >
+                    <p class="text-sm font-medium">{{ order.order_notes }}</p>
+                  </div>
                 </div>
               </div>
             </div>

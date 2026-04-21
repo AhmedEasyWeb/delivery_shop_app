@@ -37,7 +37,18 @@ const handleShowDriverLocation = (driverId: number) => {
   showDriverMap.value = true;
 };
 
-const { messages, sendMessage } = useWebSocket(auth.user?.restaurant_id || 0);
+const { messages, sendMessage, init } = useWebSocket(
+  auth.user?.restaurant_id || 0,
+);
+
+watch(
+  () => auth.user?.restaurant_id,
+  (newId) => {
+    if (newId) {
+      init(newId);
+    }
+  },
+);
 
 const currentPage = ref(1);
 const itemsPerPage = ref(50);
@@ -146,12 +157,6 @@ watch(
   },
   { immediate: true, deep: true },
 );
-
-function redirectToWhatsApp(phone: string) {
-  const cleanPhone = phone.replace(/\D/g, "");
-  const whatsappUrl = `https://wa.me/${cleanPhone}`;
-  window.open(whatsappUrl, "_blank");
-}
 </script>
 <template>
   <Header />
@@ -241,11 +246,12 @@ function redirectToWhatsApp(phone: string) {
   />
 
   <!-- WhatsApp Support Button -->
-  <button
-    @click="redirectToWhatsApp('+201214555193')"
-    class="fixed bottom-6 left-6 z-50 flex items-center gap-2 bg-[#25D366] text-white px-4 py-3 rounded-full shadow-lg hover:bg-[#128C7E] active:scale-95 transition-all outline-none"
+  <a
+    href="https://wa.me/+201214555193"
+    target="_blank"
+    class="fixed bottom-6 left-6 z-50 flex items-center gap-2 bg-[#25D366] text-white px-4 py-3 rounded-full shadow-lg hover:bg-[#128C7E] transition-all transform hover:scale-105"
   >
     <MessageCircle class="h-5 w-5" />
     <span class="font-medium text-sm">تواصل مع الدعم</span>
-  </button>
+  </a>
 </template>

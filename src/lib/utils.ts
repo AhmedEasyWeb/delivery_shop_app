@@ -3,6 +3,16 @@ import { clsx } from "clsx";
 import { Clock, Package, Truck, XCircle } from "lucide-vue-next";
 import { twMerge } from "tailwind-merge";
 import { h } from "vue";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import "dayjs/locale/ar";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.locale("ar");
+
+const EGYPT_TZ = "Africa/Cairo";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -72,3 +82,77 @@ const getPaymentMethod = (method?: string) => {
 };
 
 export { getStatusIcon, getStatusColor, getStatus, getPaymentMethod };
+
+export function formatEGDate(
+  dateInput: string | number | Date | null | undefined,
+): string {
+  if (!dateInput) return "";
+  try {
+    let d;
+    if (typeof dateInput === "string" && dateInput.endsWith("Z")) {
+      d = dayjs(dateInput.replace("Z", "")).tz(EGYPT_TZ, true);
+    } else {
+      d = dayjs(dateInput).tz(EGYPT_TZ);
+    }
+    // Standardizing to the Egypt wall-clock time
+    return d.format("YYYY-MM-DD HH:mm:ss");
+  } catch (e) {
+    return String(dateInput);
+  }
+}
+
+export function formatDateTime(
+  dateInput: string | number | Date | null | undefined,
+): string {
+  if (!dateInput) return "";
+  try {
+    return dayjs(dateInput).tz(EGYPT_TZ).format("D/M/YYYY h:mm A");
+  } catch (e) {
+    return String(dateInput);
+  }
+}
+
+export function formatToEgyptLocale(
+  dateInput: string | number | Date | null | undefined,
+): string {
+  if (!dateInput) return "";
+  try {
+    let d;
+    if (typeof dateInput === "string" && dateInput.endsWith("Z")) {
+      d = dayjs(dateInput.replace("Z", "")).tz(EGYPT_TZ, true);
+    } else {
+      d = dayjs(dateInput).tz(EGYPT_TZ);
+    }
+    return d.locale("ar").format("D/M/YYYY h:mm A");
+  } catch (e) {
+    return String(dateInput);
+  }
+}
+
+export function formatToEgyptDate(
+  dateInput: string | number | Date | null | undefined,
+): string {
+  if (!dateInput) return "";
+  try {
+    let d;
+    if (typeof dateInput === "string" && dateInput.endsWith("Z")) {
+      d = dayjs(dateInput.replace("Z", "")).tz(EGYPT_TZ, true);
+    } else {
+      d = dayjs(dateInput).tz(EGYPT_TZ);
+    }
+    return d.locale("ar").format("D/M/YYYY");
+  } catch (e) {
+    return String(dateInput);
+  }
+}
+
+export function getEGToday(): string {
+  return dayjs().tz(EGYPT_TZ).format("YYYY-MM-DD");
+}
+
+export function getEGTimestamp(
+  dateInput?: string | number | Date | null,
+): string {
+  const d = dateInput ? dayjs(dateInput).tz(EGYPT_TZ) : dayjs().tz(EGYPT_TZ);
+  return d.format("YYYY-MM-DDTHH:mm:ss.SSSZ");
+}

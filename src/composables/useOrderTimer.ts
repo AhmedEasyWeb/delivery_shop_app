@@ -1,7 +1,57 @@
-import { onUnmounted, watch, type Ref } from "vue";
+import { ref, watch, type Ref } from "vue";
+import { Capacitor } from "@capacitor/core";
+import { App } from "@capacitor/app";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import type { Order } from "@/types";
 
-function notifyUser(title: string, body: string) {
+const trackedOrders = ref<any[]>([]);
+let isGlobalTimerRunning = false;
+let globalSendWS: ((data: any) => void) | null = null;
+
+try {
+  const cached = localStorage.getItem("delivery_shop_active_orders");
+  if (cached) {
+    trackedOrders.value = JSON.parse(cached);
+  }
+} catch (err) {
+  console.error("Failed to parse cached active orders:", err);
+}
+
+watch(
+  trackedOrders,
+  (newVal) => {
+    const active = newVal.filter(
+      (o) => o.order_status !== "delivered" && o.order_status !== "picked_up",
+    );
+    localStorage.setItem("delivery_shop_active_orders", JSON.stringify(active));
+  },
+  { deep: true },
+);
+
+async function notifyUser(title: string, body: string) {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const perm = await LocalNotifications.checkPermissions();
+      if (perm.display !== "granted") {
+        await LocalNotifications.requestPermissions();
+      }
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            title,
+            body,
+            id: Math.floor(Math.random() * 1000000),
+            schedule: { at: new Date(Date.now() + 100) },
+            sound: "beep.wav",
+          },
+        ],
+      });
+    } catch (err) {
+      console.error("Native notification failed:", err);
+    }
+    return;
+  }
+
   if (!("Notification" in window)) {
     console.warn("This browser does not support desktop notifications.");
     return;
@@ -18,96 +68,120 @@ function notifyUser(title: string, body: string) {
   }
 }
 
+// Tick timers when app comes to foreground
+if (Capacitor.isNativePlatform()) {
+  App.addListener("appStateChange", ({ isActive }) => {
+    if (isActive) {
+      console.log("📱 App resumed, checking order timers...");
+      globalTick();
+    }
+  });
+}
+
+function globalTick() {
+  const now = Date.now();
+
+  trackedOrders.value.forEach((order) => {
+    if (
+      order.order_status === "delivered" ||
+      order.order_status === "picked_up"
+    ) {
+      return;
+    }
+
+    if (order.order_status === "preparing") {
+      const created = new Date(order.created_at).getTime();
+      const passed = (now - created) / 60000;
+
+      if (passed >= 21 && !order._late_preparing_sent) {
+        if (globalSendWS) {
+          globalSendWS({
+            type: "late_preparing_order",
+            order_id: order.order_id,
+          });
+        }
+        notifyUser(
+          "إعداد الطلب يستغرق وقتا طويلا",
+          `تم إخطار الإدارة برقم الطلب ${order.order_id} خذ ${passed.toFixed(1)} دقائق للتحضير`,
+        );
+        order._late_preparing_sent = true;
+      }
+    }
+
+    if (order.order_status === "ready" && order.ready_at) {
+      const ready = new Date(order.ready_at).getTime();
+      const passed = (now - ready) / 60000;
+
+      if (passed >= 41 && !order._late_pickup_sent) {
+        if (globalSendWS) {
+          globalSendWS({
+            type: "late_pickup_order",
+            order_id: order.order_id,
+          });
+        }
+        notifyUser(
+          "لم يتم استلام الطلب من قبل أي سائق منذ فترة طويلة",
+          `سيتم إخطار الإدارة بهذا الأمر للمساعدة في أسرع وقت ممكن`,
+        );
+        order._late_pickup_sent = true;
+      }
+    }
+  });
+}
+
+function startGlobalTimer() {
+  if (!isGlobalTimerRunning) {
+    isGlobalTimerRunning = true;
+    setInterval(globalTick, 10000);
+  }
+}
+
 export function useOrderTimers(
   orders: Ref<Order[]>,
-  sendWS: (data: any) => void
+  sendWS: (data: any) => void,
 ) {
-  const timers = new Map<number, number>();
+  globalSendWS = sendWS;
 
-  function clearTimer(order_id: number) {
-    if (timers.has(order_id)) {
-      clearInterval(timers.get(order_id));
-      timers.delete(order_id);
-    }
-  }
-
-  function startTimers() {
-    orders.value.forEach((order: any) => {
-      const id = order.order_id;
-
-      clearTimer(id);
-
-      const interval = window.setInterval(() => {
-        const now = Date.now();
-
-        if (
-          order.order_status === "delivered" ||
-          order.order_status === "picked_up"
-        ) {
-          return;
-        }
-
-        if (order.order_status === "preparing") {
-          const created = new Date(order.created_at).getTime();
-          const passed = (now - created) / 60000;
-
-          if (passed >= 21 && !order._late_preparing_sent) {
-            sendWS({
-              type: "late_preparing_order",
-              order_id: order.order_id,
-            });
-            notifyUser(
-              "إعداد الطلب يستغرق وقتا طويلا",
-              `تم إخطار الإدارة برقم الطلب ${order.order_id} خذ ${passed} دقائق للتحضير`
-            );
-            order._late_preparing_sent = true;
-          }
-        }
-
-        if (order.order_status === "ready") {
-          const ready = new Date(order.ready_at).getTime();
-          const passed = (now - ready) / 60000;
-
-          if (passed >= 41 && !order._late_pickup_sent) {
-            sendWS({
-              type: "late_pickup_order",
-              order_id: order.order_id,
-            });
-            notifyUser(
-              "لم يتم استلام الطلب من قبل أي سائق منذ فترة طويلة",
-              `سيتم إخطار الإدارة بهذا الأمر للمساعدة في أسرع وقت ممكن`
-            );
-            order._late_pickup_sent = true;
-          }
-        }
-      }, 10000);
-
-      timers.set(id, interval);
-    });
-  }
-
-  function stopTimer(order_id: number) {
-    clearTimer(order_id);
-  }
+  startGlobalTimer();
 
   watch(
     orders,
     (newOrders) => {
-      startTimers();
+      const newTrackedMap = new Map();
 
-      timers.forEach((_, id) => {
-        if (!newOrders.find((o) => o.order_id === id)) {
-          clearTimer(id);
+      for (const t of trackedOrders.value) {
+        newTrackedMap.set(t.order_id, t);
+      }
+
+      trackedOrders.value = newOrders.map((o) => {
+        const existing = newTrackedMap.get(o.order_id);
+        if (existing) {
+          return {
+            ...o,
+            _late_preparing_sent: existing._late_preparing_sent || false,
+            _late_pickup_sent: existing._late_pickup_sent || false,
+          };
         }
+        return {
+          ...o,
+          _late_preparing_sent: false,
+          _late_pickup_sent: false,
+        };
       });
     },
-    { deep: true, immediate: true }
+    { deep: true, immediate: true },
   );
 
-  onUnmounted(() => {
-    timers.forEach((interval) => clearInterval(interval));
-    timers.clear();
-  });
+  function startTimers() {
+    startGlobalTimer();
+  }
+
+  function stopTimer(order_id: number) {
+    const target = trackedOrders.value.find((o) => o.order_id === order_id);
+    if (target) {
+      target.order_status = "delivered";
+    }
+  }
 
   return { startTimers, stopTimer };
 }
