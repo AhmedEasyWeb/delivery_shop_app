@@ -10,6 +10,9 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.app.PendingIntent;
+import android.media.AudioAttributes;
+import android.net.Uri;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
@@ -36,7 +39,9 @@ public class DriverWebSocketService extends Service {
     public static final String WS_URL = "wss://deliveryshop.cloud";
 
     private static final String CHANNEL_ID = "driver_ws_channel";
+    private static final String ALERT_CHANNEL_ID = "driver_alert_channel";
     private static final int NOTIFICATION_ID = 202;
+    private static final int ALERT_NOTIFICATION_ID = 203;
     private static final int HEARTBEAT_INTERVAL_SEC = 25;
     private static final int RECONNECT_DELAY_MS = 3000;
     private static final double MOVEMENT_THRESHOLD = 0.00015;
@@ -197,7 +202,10 @@ public class DriverWebSocketService extends Service {
                 Log.d(TAG, "📩 Message: " + text);
                 try {
                     JSONObject data = new JSONObject(text);
-                    mainHandler.post(() -> broadcastEvent("message", data));
+                    mainHandler.post(() -> {
+                        processIncomingMessage(data);
+                        broadcastEvent("message", data);
+                    });
                 } catch (JSONException e) {
                     Log.e(TAG, "Parse error: " + e.getMessage());
                 }
@@ -419,14 +427,38 @@ public class DriverWebSocketService extends Service {
     // ── Notification ─────────────────────────────────────────────────────────
 
     private void createNotificationChannel() {
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        if (nm == null) return;
+
+        // 1. Sticky foreground service channel (Low importance)
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
                 "Driver Tracking",
                 NotificationManager.IMPORTANCE_LOW
         );
         channel.setDescription("Keeps driver WebSocket alive");
-        NotificationManager nm = getSystemService(NotificationManager.class);
-        if (nm != null) nm.createNotificationChannel(channel);
+        nm.createNotificationChannel(channel);
+
+        // 2. High-priority Alert channel (High importance + Sound)
+        NotificationChannel alertChannel = new NotificationChannel(
+                ALERT_CHANNEL_ID,
+                "Order Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+        );
+        alertChannel.setDescription("New order assignments and ready status alerts");
+        alertChannel.enableLights(true);
+        alertChannel.enableVibration(true);
+        alertChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+
+        // Custom Sound: android.resource://[package]/raw/order_sound
+        Uri soundUri = Uri.parse("android.resource://" + getPackageName() + "/raw/order_sound");
+        AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .build();
+        alertChannel.setSound(soundUri, audioAttributes);
+
+        nm.createNotificationChannel(alertChannel);
     }
 
     private Notification buildNotification(String status) {
@@ -444,7 +476,56 @@ public class DriverWebSocketService extends Service {
         if (nm != null) nm.notify(NOTIFICATION_ID, buildNotification(status));
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
+    private void processIncomingMessage(JSONObject data) {
+        try {
+            String type = data.optString("type", "");
+            if ("new_order_nearby".equals(type)) {
+                JSONObject order = data.optJSONObject("order");
+                String restName = order != null ? order.optString("restaurant_name", "مطعم جديد") : "مطعم جديد";
+                showOrderAlert("طلب جديد قريب منك 📦", "لديك طلب جديد من " + restName);
+            }
+            else if ("new_orders_nearby".equals(type)) {
+                JSONArray orders = data.optJSONArray("orders");
+                int count = orders != null ? orders.length() : 0;
+                showOrderAlert("طلبات جديدة قريبة منك 📦", "لديك " + count + " طلبات جديدة جاهزة للاستلام");
+            }
+            else if ("order_status_updated".equals(type)) {
+                String status = data.optString("order_status", "");
+                if ("ready".equalsIgnoreCase(status)) {
+                    int orderId = data.optInt("order_id", 0);
+                    showOrderAlert("طلب جاهز للاستلام ✅", "الطلب رقم #" + orderId + " جاهز الآن");
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "processIncomingMessage error: " + e.getMessage());
+        }
+    }
+
+    private void showOrderAlert(String title, String message) {
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        if (nm == null) return;
+
+        Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, (int)System.currentTimeMillis(), launchIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Uri soundUri = Uri.parse("android.resource://" + getPackageName() + "/raw/order_sound");
+
+        Notification notification = new NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setSmallIcon(android.R.drawable.ic_popup_reminder)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setAutoCancel(true)
+                .setSound(soundUri)
+                .setVibrate(new long[]{0, 500, 200, 500})
+                .setContentIntent(pendingIntent)
+                .setFullScreenIntent(pendingIntent, true) // Heads-up notification
+                .build();
+
+        nm.notify(ALERT_NOTIFICATION_ID, notification);
+    }
 
     private JSONArray toJsonArray(int[] ids) {
         JSONArray arr = new JSONArray();
