@@ -120,10 +120,9 @@ public class DriverTrackerPlugin extends Plugin {
         int[] ids = new int[0];
         if (jsIds != null) {
             try {
-                JSONArray arr = jsIds.toJSONArray();
-                ids = new int[arr.length()];
-                for (int i = 0; i < arr.length(); i++) {
-                    ids[i] = arr.getInt(i);
+                ids = new int[jsIds.length()];
+                for (int i = 0; i < jsIds.length(); i++) {
+                    ids[i] = jsIds.getInt(i);
                 }
             } catch (JSONException e) {
                 Log.e(TAG, "updateOrdersList parse error: " + e.getMessage());
