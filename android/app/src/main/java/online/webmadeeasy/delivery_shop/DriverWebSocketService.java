@@ -481,13 +481,33 @@ public class DriverWebSocketService extends Service {
             String type = data.optString("type", "");
             if ("new_order_nearby".equals(type)) {
                 JSONObject order = data.optJSONObject("order");
-                String restName = order != null ? order.optString("restaurant_name", "مطعم جديد") : "مطعم جديد";
-                showOrderAlert("طلب جديد قريب منك 📦", "لديك طلب جديد من " + restName);
+                if (order != null) {
+                    int orderId = order.optInt("order_id", -1);
+                    if (isOrderTracked(orderId)) {
+                        Log.d(TAG, "Skipping notification for already tracked order: " + orderId);
+                        return;
+                    }
+                    String restName = order.optString("restaurant_name", "مطعم جديد");
+                    showOrderAlert("طلب جديد قريب منك 📦", "لديك طلب جديد من " + restName);
+                }
             }
             else if ("new_orders_nearby".equals(type)) {
                 JSONArray orders = data.optJSONArray("orders");
-                int count = orders != null ? orders.length() : 0;
-                showOrderAlert("طلبات جديدة قريبة منك 📦", "لديك " + count + " طلبات جديدة جاهزة للاستلام");
+                if (orders != null && orders.length() > 0) {
+                    boolean hasNew = false;
+                    for (int i = 0; i < orders.length(); i++) {
+                        JSONObject o = orders.optJSONObject(i);
+                        if (o != null && !isOrderTracked(o.optInt("order_id", -1))) {
+                            hasNew = true;
+                            break;
+                        }
+                    }
+                    if (hasNew) {
+                        showOrderAlert("طلبات جديدة قريبة منك 📦", "لديك " + orders.length() + " طلبات جديدة جاهزة للاستلام");
+                    } else {
+                        Log.d(TAG, "Skipping notification: all orders already tracked");
+                    }
+                }
             }
             else if ("order_status_updated".equals(type)) {
                 String status = data.optString("order_status", "");
@@ -499,6 +519,14 @@ public class DriverWebSocketService extends Service {
         } catch (Exception e) {
             Log.e(TAG, "processIncomingMessage error: " + e.getMessage());
         }
+    }
+
+    private boolean isOrderTracked(int orderId) {
+        if (orderIds == null) return false;
+        for (int id : orderIds) {
+            if (id == orderId) return true;
+        }
+        return false;
     }
 
     private void showOrderAlert(String title, String message) {

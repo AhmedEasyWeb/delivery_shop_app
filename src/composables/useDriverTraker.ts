@@ -112,31 +112,40 @@ export function useDriverTracker() {
     console.log("📩 Received Native WS Message:", data);
 
     if (data.type === "new_order_nearby") {
-      const order =
-        typeof data.order === "string" ? JSON.parse(data.order) : data.order;
+      let order = data.order;
+      if (typeof order === "string") {
+        try { order = JSON.parse(order); } catch (e) { }
+      }
       
-      const exists = ordersStore.orders.some(o => Number(o.order_id) === Number(order.order_id));
-      if (!exists) {
-        showOrderNotification(order);
-        NativeDriverTracker.sendUpdateOrders({
-          order_id: Number(order.order_id),
-          restaurant_id: Number(order.restaurant_id),
-        });
-        ordersStore.addOrder(order);
-        authStore.setStationedAt(order.restaurant_id);
-        toast.success("📦 طلب جديد قريب منك");
+      if (order) {
+        const orderId = Number(order.order_id);
+        const exists = ordersStore.orders.some(o => Number(o.order_id) === orderId);
+        if (!exists) {
+          order.order_id = orderId; // Ensure it's a number
+          showOrderNotification(order);
+          NativeDriverTracker.sendUpdateOrders({
+            order_id: orderId,
+            restaurant_id: Number(order.restaurant_id),
+          });
+          ordersStore.addOrder(order);
+          authStore.setStationedAt(order.restaurant_id);
+          toast.success("📦 طلب جديد قريب منك");
+        }
       }
     }
 
     if (data.type === "new_orders_nearby") {
-      const ordersArr =
-        typeof data.orders === "string" ? JSON.parse(data.orders) : data.orders;
+      let ordersArr = data.orders;
+      if (typeof ordersArr === "string") {
+        try { ordersArr = JSON.parse(ordersArr); } catch (e) { }
+      }
       
-      if (ordersArr?.length > 0) {
-        // Filter out orders that already exist in our store
-        const newOrders = ordersArr.filter((order: any) => 
-          !ordersStore.orders.some(o => Number(o.order_id) === Number(order.order_id))
-        );
+      if (Array.isArray(ordersArr) && ordersArr.length > 0) {
+        const newOrders = ordersArr.filter((order: any) => {
+          const orderId = Number(order.order_id);
+          order.order_id = orderId; // Normalize while filtering
+          return !ordersStore.orders.some(o => Number(o.order_id) === orderId);
+        });
 
         if (newOrders.length > 0) {
           showOrderNotification(newOrders[0]);
@@ -152,34 +161,45 @@ export function useDriverTracker() {
       }
     }
 
-    if (data.type === "updated_order") {
-      const order =
-        typeof data.order === "string" ? JSON.parse(data.order) : data.order;
-      ordersStore.updateOrder(order);
-    }
+    if (data.type === "updated_order" || data.type === "order_status_updated") {
+      let orderId = Number(data.order_id || 0);
+      let orderStatus = data.order_status;
+      let orderData = data.order;
 
-    if (data.type === "order_status_updated") {
-      const orderId = Number(data.order_id || data.order?.order_id || 0);
-      const orderStatus = data.order_status || data.order?.order_status;
-
-      console.log(`🔄 Order ${orderId} status updated to: ${orderStatus}`);
-
-      if (orderStatus === "ready") {
-        showUpdateOrderNotification(orderId);
+      // Handle stringified order data if it arrives that way
+      if (typeof orderData === "string") {
+        try {
+          orderData = JSON.parse(orderData);
+        } catch (e) {
+          console.error("Failed to parse order data string:", e);
+        }
       }
 
-      if (orderStatus === "delivered" || orderStatus === "canceled") {
-        ordersStore.removeOrder(orderId);
-        NativeDriverTracker.sendFreeDriver();
-        return;
+      // Extract info from order object if available
+      if (orderData) {
+        orderId = orderId || Number(orderData.order_id);
+        orderStatus = orderStatus || orderData.order_status;
       }
 
-      if (data.order) {
-        const order =
-          typeof data.order === "string" ? JSON.parse(data.order) : data.order;
-        ordersStore.updateOrder(order);
-      } else if (orderId && orderStatus) {
-        ordersStore.updateOrderStatus(orderId, orderStatus);
+      console.log(`🔄 Processing ${data.type}: ID=${orderId}, Status=${orderStatus}`);
+
+      if (orderId && orderStatus) {
+        if (orderStatus === "ready") {
+          showUpdateOrderNotification(orderId);
+        }
+
+        if (orderStatus === "delivered" || orderStatus === "canceled") {
+          ordersStore.removeOrder(orderId);
+          NativeDriverTracker.sendFreeDriver();
+          return;
+        }
+
+        // Apply updates
+        if (orderData) {
+          ordersStore.updateOrder(orderData);
+        } else {
+          ordersStore.updateOrderStatus(orderId, orderStatus);
+        }
       }
     }
   }

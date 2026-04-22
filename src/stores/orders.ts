@@ -33,14 +33,15 @@ export const useOrdersStore = defineStore("orders", () => {
   }
 
   function updateOrder(updatedOrder: Order) {
+    const orderId = Number(updatedOrder.order_id);
     const index = orders.value.findIndex(
-      (o) => o.order_id === updatedOrder.order_id
+      (o) => Number(o.order_id) === orderId
     );
 
     if (index !== -1) {
       orders.value = orders.value.map((order) =>
-        order.order_id === updatedOrder.order_id
-          ? { ...order, ...updatedOrder }
+        Number(order.order_id) === orderId
+          ? { ...order, ...updatedOrder, order_id: orderId }
           : order
       );
       toast.warning("تم تحديث الطلب");
@@ -50,11 +51,12 @@ export const useOrdersStore = defineStore("orders", () => {
   }
 
   function updateOrderStatus(orderId: number, status: string) {
-    const index = orders.value.findIndex((o) => o.order_id === orderId);
+    const targetId = Number(orderId);
+    const index = orders.value.findIndex((o) => Number(o.order_id) === targetId);
 
     if (index !== -1) {
       orders.value = orders.value.map((order) =>
-        order.order_id === orderId ? { ...order, order_status: status } : order
+        Number(order.order_id) === targetId ? { ...order, order_status: status } : order
       );
       toast.info("تم تحديث حالة الطلب");
     } else {
