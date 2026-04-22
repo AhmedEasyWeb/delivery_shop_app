@@ -45,7 +45,6 @@ const timer = ref("00:00");
 const timerColor = ref("text-green-600");
 let interval: any = null;
 
-// Modal state
 const isModalOpen = ref(false);
 const selectedImageUrl = ref("");
 
@@ -69,7 +68,6 @@ function startTimer(createdAt: string | null) {
     const now = Date.now();
     const diff = Math.floor((now - start) / 1000);
 
-    // Guard against negative diffs (clock sync issues)
     const positiveDiff = Math.max(0, diff);
 
     const minutes = Math.floor(positiveDiff / 60);

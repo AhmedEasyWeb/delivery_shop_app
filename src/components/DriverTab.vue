@@ -10,9 +10,10 @@ import {
 import { Card, CardContent } from "./ui/card";
 import { useAuthStore } from "@/stores/auth";
 import DriverOrders from "@/components/DriverOrders.vue";
-import { computed, onMounted, ref, watch } from "vue";
-import { useOrdersStore } from "@/stores/orders";
 import api from "@/api/axios";
+import { App } from "@capacitor/app";
+import { onBeforeUnmount, onMounted, ref, watch, computed } from "vue";
+import { useOrdersStore } from "@/stores/orders";
 
 const authStore = useAuthStore();
 const ordersStore = useOrdersStore();
@@ -24,7 +25,7 @@ const isRefreshing = ref(false);
 
 async function getDriverData() {
   if (!authStore.driver?.driver_id) return;
-  
+
   try {
     isRefreshing.value = true;
     const res = await api.get(`/driver/${authStore.driver.driver_id}`);
@@ -36,7 +37,7 @@ async function getDriverData() {
       completedToday.value = 0;
       todayEarnings.value = 0;
     }
-    
+
     if (res.data && res.data.orders) {
       ordersStore.orders = res.data.orders;
     }
@@ -47,8 +48,30 @@ async function getDriverData() {
   }
 }
 
+const refreshInterval = ref<any>(null);
+let appStateListener: any = null;
+
 onMounted(async () => {
   await getDriverData();
+
+  refreshInterval.value = setInterval(() => {
+    getDriverData();
+  }, 30000);
+
+  appStateListener = App.addListener("appStateChange", ({ isActive }) => {
+    if (isActive) {
+      getDriverData();
+    }
+  });
+});
+
+onBeforeUnmount(() => {
+  if (refreshInterval.value) {
+    clearInterval(refreshInterval.value);
+  }
+  if (appStateListener) {
+    appStateListener.remove();
+  }
 });
 
 watch(
