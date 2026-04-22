@@ -23,13 +23,23 @@ const orders = computed(() => ordersStore.orders);
 const isRefreshing = ref(false);
 
 async function getDriverData() {
+  if (!authStore.driver?.driver_id) return;
+  
   try {
     isRefreshing.value = true;
-    const res = await api.get(`/driver/${authStore.driver?.driver_id}`);
+    const res = await api.get(`/driver/${authStore.driver.driver_id}`);
 
-    completedToday.value = res.data.status.completedToday;
-    todayEarnings.value = res.data.status.todayEarnings;
-    ordersStore.orders = res.data.orders;
+    if (res.data && res.data.status) {
+      completedToday.value = res.data.status.completedToday || 0;
+      todayEarnings.value = res.data.status.todayEarnings || 0;
+    } else {
+      completedToday.value = 0;
+      todayEarnings.value = 0;
+    }
+    
+    if (res.data && res.data.orders) {
+      ordersStore.orders = res.data.orders;
+    }
   } catch (err: any) {
     console.error("Failed to fetch driver data:", err);
   } finally {
