@@ -14,6 +14,10 @@ import {
   MessageCircle,
 } from "lucide-vue-next";
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
 import api from "@/api/axios";
 import baseUrl from "@/utils/baseUrl";
 import { toast } from "vue-sonner";
@@ -24,6 +28,11 @@ import {
   getStatusColor,
   getStatusIcon,
 } from "@/lib/utils";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const EGYPT_TZ = "Africa/Cairo";
 
 const props = defineProps({
   order: {
@@ -48,11 +57,7 @@ function startTimer(createdAt: string | null) {
     return;
   }
 
-  // Ensure SQL date string is compatible with all browsers (Capacitor/iOS/Android)
-  const formattedDate = createdAt.includes("T")
-    ? createdAt
-    : createdAt.replace(" ", "T");
-  const start = new Date(formattedDate).getTime();
+  const start = dayjs.utc(createdAt.replace(" ", "T")).valueOf();
 
   if (isNaN(start)) {
     timer.value = "00:00";

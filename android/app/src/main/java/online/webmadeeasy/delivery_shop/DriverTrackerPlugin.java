@@ -202,14 +202,7 @@ public class DriverTrackerPlugin extends Plugin {
                 try {
                     if (payloadStr != null && !payloadStr.isEmpty()) {
                         JSONObject json = new JSONObject(payloadStr);
-                        // Copy all keys from JSON to JSObject
-                        JSONArray keys = json.names();
-                        if (keys != null) {
-                            for (int i = 0; i < keys.length(); i++) {
-                                String key = keys.getString(i);
-                                jsPayload.put(key, json.get(key));
-                            }
-                        }
+                        jsPayload = JSObject.fromJSONObject(json);
                     }
                 } catch (JSONException e) {
                     Log.e(TAG, "BroadcastReceiver parse error: " + e.getMessage());

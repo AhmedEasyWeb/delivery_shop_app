@@ -12,8 +12,10 @@ export const useOrdersStore = defineStore("orders", () => {
   const orders = ref<Order[]>([]);
 
   function addOrder(order: Order) {
-    orders.value.unshift(order);
-    toast.success("تم إضافة طلب جديد");
+    if (!orders.value.find((o) => o.order_id === order.order_id)) {
+      orders.value.unshift(order);
+      toast.success("تم إضافة طلب جديد");
+    }
   }
 
   function addOrders(newOrders: Order[]) {

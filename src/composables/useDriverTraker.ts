@@ -34,12 +34,13 @@ interface DriverTrackerPlugin {
   changeCity(options: { city: string }): Promise<void>;
   addListener(
     event: "wsConnected" | "wsDisconnected" | "wsMessage",
-    callback: (data: any) => void
+    callback: (data: any) => void,
   ): Promise<{ remove: () => void }>;
 }
 
 // Register the native plugin — maps to @CapacitorPlugin(name = "DriverTracker")
-const NativeDriverTracker = registerPlugin<DriverTrackerPlugin>("DriverTracker");
+const NativeDriverTracker =
+  registerPlugin<DriverTrackerPlugin>("DriverTracker");
 
 export function useDriverTracker() {
   const authStore = useAuthStore();
@@ -75,7 +76,7 @@ export function useDriverTracker() {
       () => {
         isConnected.value = true;
         console.log("✅ Native WS Connected");
-      }
+      },
     );
 
     // wsDisconnected event — Java auto-reconnects; we just update UI state
@@ -84,7 +85,7 @@ export function useDriverTracker() {
       () => {
         isConnected.value = false;
         console.log("❌ Native WS Disconnected — Java will reconnect...");
-      }
+      },
     );
 
     // wsMessage event — same logic as old handleWsMessage()
@@ -92,7 +93,7 @@ export function useDriverTracker() {
       "wsMessage",
       (data: any) => {
         handleWsMessage(data);
-      }
+      },
     );
   }
 
@@ -108,38 +109,60 @@ export function useDriverTracker() {
   // ── Message Handler (identical logic to the original TS version) ─────────────
 
   function handleWsMessage(data: any) {
+    console.log("📩 Received Native WS Message:", data);
+
     if (data.type === "new_order_nearby") {
-      showOrderNotification(data.order);
-      NativeDriverTracker.sendUpdateOrders({
-        order_id: data.order.order_id,
-        restaurant_id: data.order.restaurant_id,
-      });
-      ordersStore.addOrder(data.order);
-      authStore.setStationedAt(data.order.restaurant_id);
-      toast.success("📦 طلب جديد قريب منك");
+      const order =
+        typeof data.order === "string" ? JSON.parse(data.order) : data.order;
+      
+      const exists = ordersStore.orders.some(o => Number(o.order_id) === Number(order.order_id));
+      if (!exists) {
+        showOrderNotification(order);
+        NativeDriverTracker.sendUpdateOrders({
+          order_id: Number(order.order_id),
+          restaurant_id: Number(order.restaurant_id),
+        });
+        ordersStore.addOrder(order);
+        authStore.setStationedAt(order.restaurant_id);
+        toast.success("📦 طلب جديد قريب منك");
+      }
     }
 
     if (data.type === "new_orders_nearby") {
-      if (data.orders?.length > 0) {
-        showOrderNotification(data.orders[0]);
-        data.orders.forEach((order: any) => {
-          NativeDriverTracker.sendUpdateOrders({
-            order_id: order.order_id,
-            restaurant_id: order.restaurant_id,
+      const ordersArr =
+        typeof data.orders === "string" ? JSON.parse(data.orders) : data.orders;
+      
+      if (ordersArr?.length > 0) {
+        // Filter out orders that already exist in our store
+        const newOrders = ordersArr.filter((order: any) => 
+          !ordersStore.orders.some(o => Number(o.order_id) === Number(order.order_id))
+        );
+
+        if (newOrders.length > 0) {
+          showOrderNotification(newOrders[0]);
+          newOrders.forEach((order: any) => {
+            NativeDriverTracker.sendUpdateOrders({
+              order_id: Number(order.order_id),
+              restaurant_id: Number(order.restaurant_id),
+            });
           });
-        });
-        ordersStore.addOrders(data.orders);
-        authStore.setStationedAt(data.orders[0].restaurant_id);
+          ordersStore.addOrders(newOrders);
+          authStore.setStationedAt(newOrders[0].restaurant_id);
+        }
       }
     }
 
     if (data.type === "updated_order") {
-      ordersStore.updateOrder(data.order);
+      const order =
+        typeof data.order === "string" ? JSON.parse(data.order) : data.order;
+      ordersStore.updateOrder(order);
     }
 
     if (data.type === "order_status_updated") {
-      const orderId = data.order_id || data.order?.order_id;
+      const orderId = Number(data.order_id || data.order?.order_id || 0);
       const orderStatus = data.order_status || data.order?.order_status;
+
+      console.log(`🔄 Order ${orderId} status updated to: ${orderStatus}`);
 
       if (orderStatus === "ready") {
         showUpdateOrderNotification(orderId);
@@ -152,15 +175,15 @@ export function useDriverTracker() {
       }
 
       if (data.order) {
-        ordersStore.updateOrder(data.order);
-      } else {
+        const order =
+          typeof data.order === "string" ? JSON.parse(data.order) : data.order;
+        ordersStore.updateOrder(order);
+      } else if (orderId && orderStatus) {
         ordersStore.updateOrderStatus(orderId, orderStatus);
       }
     }
   }
 
-  // ── Sync orders state from Pinia → Java ──────────────────────────────────────
-  // Whenever orders change we tell Java so its location_update payloads stay accurate
   watch(
     () => ordersStore.orders,
     (orders) => {
@@ -170,7 +193,7 @@ export function useDriverTracker() {
         stationed_at: authStore.driver?.stationed_at ?? null,
       });
     },
-    { deep: true }
+    { deep: true },
   );
 
   // ── Go Online / Offline ───────────────────────────────────────────────────────
@@ -196,7 +219,9 @@ export function useDriverTracker() {
     let initialLng: number | null = null;
     try {
       const { Geolocation } = await import("@capacitor/geolocation");
-      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+      const pos = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+      });
       initialLat = pos.coords.latitude;
       initialLng = pos.coords.longitude;
     } catch (err) {
@@ -206,7 +231,7 @@ export function useDriverTracker() {
 
     // Connect WebSocket — passes initial location so driver_init is complete
     await NativeDriverTracker.goOnline({
-      driver_id:   driver?.driver_id ?? -1,
+      driver_id: driver?.driver_id ?? -1,
       driver_name: driver?.driver_full_name ?? "",
       driver_city: driver?.driver_city ?? "",
       initial_lat: initialLat,

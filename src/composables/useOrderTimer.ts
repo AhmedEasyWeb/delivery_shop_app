@@ -2,7 +2,11 @@ import { ref, watch, type Ref } from "vue";
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
 import { LocalNotifications } from "@capacitor/local-notifications";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import type { Order } from "@/types";
+
+dayjs.extend(utc);
 
 const trackedOrders = ref<any[]>([]);
 let isGlobalTimerRunning = false;
@@ -78,6 +82,7 @@ if (Capacitor.isNativePlatform()) {
   });
 }
 
+
 function globalTick() {
   const now = Date.now();
 
@@ -90,7 +95,7 @@ function globalTick() {
     }
 
     if (order.order_status === "preparing") {
-      const created = new Date(order.created_at).getTime();
+      const created = dayjs.utc(order.created_at).valueOf();
       const passed = (now - created) / 60000;
 
       if (passed >= 21 && !order._late_preparing_sent) {
@@ -109,7 +114,7 @@ function globalTick() {
     }
 
     if (order.order_status === "ready" && order.ready_at) {
-      const ready = new Date(order.ready_at).getTime();
+      const ready = dayjs.utc(order.ready_at).valueOf();
       const passed = (now - ready) / 60000;
 
       if (passed >= 41 && !order._late_pickup_sent) {
