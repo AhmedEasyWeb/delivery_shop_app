@@ -17,10 +17,11 @@ import {
 import Separator from "./ui/separator/Separator.vue";
 import baseUrl from "@/utils/baseUrl";
 import api from "@/api/axios";
+import { getEGToday } from "@/lib/utils";
 
 const loading = ref(false);
-const fromDate = ref(new Date().toISOString().split("T")[0]);
-const toDate = ref(new Date().toISOString().split("T")[0]);
+const fromDate = ref(getEGToday());
+const toDate = ref(getEGToday());
 const deliveryCost = ref(0);
 const sumOfOrders = ref(0);
 const sumOfOrderBasedDate = ref(0);

@@ -14,12 +14,16 @@ import api from "@/api/axios";
 import { App } from "@capacitor/app";
 import { onBeforeUnmount, onMounted, ref, watch, computed } from "vue";
 import { useOrdersStore } from "@/stores/orders";
+import { getEGToday } from "@/lib/utils";
+import { Input } from "./ui/input";
 
 const authStore = useAuthStore();
 const ordersStore = useOrdersStore();
 
 const completedToday = ref(0);
 const todayEarnings = ref(0);
+const fromDate = ref(getEGToday());
+const toDate = ref(getEGToday());
 const orders = computed(() => ordersStore.orders);
 const isRefreshing = ref(false);
 
@@ -28,7 +32,12 @@ async function getDriverData() {
 
   try {
     isRefreshing.value = true;
-    const res = await api.get(`/driver/${authStore.driver.driver_id}`);
+    const res = await api.get(`/driver/${authStore.driver.driver_id}`, {
+      params: {
+        from: fromDate.value,
+        to: toDate.value,
+      },
+    });
 
     if (res.data && res.data.status) {
       completedToday.value = res.data.status.completedToday || 0;
