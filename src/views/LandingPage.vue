@@ -19,7 +19,7 @@ import {
   Heart,
 } from "lucide-vue-next";
 import { httpRequest } from "@/utils/http";
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { toast } from "vue-sonner";
 import api from "@/api/axios";
 
@@ -34,10 +34,19 @@ const name = ref("");
 const phone = ref("");
 const message = ref("");
 const currentBransh = ref(0);
+const selectedBranch = ref("");
+const selectedCity = ref("");
 
+const branches = ref<{ branch_id: number; branch_name: string }[]>([]);
 const cities = ref<{ city_id: number; city_name: string; branch_id: number }[]>(
   [],
 );
+
+const branchCities = computed(() => {
+  if (!selectedBranch.value) return [];
+  const branchIdNum = Number(selectedBranch.value);
+  return cities.value.filter((c: any) => c.branch_id === branchIdNum);
+});
 
 const numbers: { [key: number]: string[] } = {
   0: ["01012003846", "01202777049"],
@@ -55,21 +64,41 @@ async function fetchCities() {
   }
 }
 
+async function fetchBranches() {
+  try {
+    const res = await api.get(`/branches`);
+    branches.value = res.data;
+  } catch (err) {
+    toast.error("فشل تحميل الفروع");
+  }
+}
+
 async function submitContact() {
+  if (!name.value || !phone.value || !message.value) return;
+
   const res = await httpRequest<any>({
     url: "/api/contacts",
     method: "POST",
-    data: { name: name.value, phone: phone.value, message: message.value },
+    data: {
+      name: name.value,
+      phone: phone.value,
+      message: message.value,
+      branch_id: selectedBranch.value ? Number(selectedBranch.value) : null,
+      city_name: selectedCity.value,
+    },
   });
 
   if (res.success) {
     toast.success("تم ارسال الرسالة بنجاح");
     name.value = phone.value = message.value = "";
+    selectedBranch.value = "";
+    selectedCity.value = "";
   }
 }
 
 onMounted(async () => {
   fetchCities();
+  fetchBranches();
 });
 </script>
 
@@ -455,6 +484,44 @@ onMounted(async () => {
               />
             </div>
             <div class="space-y-2">
+              <Label class="mr-2 font-bold text-slate-700">الفرع</Label>
+              <div class="relative">
+                <select
+                  v-model="selectedBranch"
+                  required
+                  class="w-full h-12 bg-slate-50 border-none rounded-xl px-4 font-bold text-sm appearance-none outline-none focus:ring-2 ring-red-500/20"
+                >
+                  <option disabled value="">اختر الفرع</option>
+                  <option
+                    v-for="branch in branches"
+                    :key="branch.branch_id"
+                    :value="String(branch.branch_id)"
+                  >
+                    {{ branch.branch_name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div class="space-y-2" v-if="selectedBranch">
+              <Label class="mr-2 font-bold text-slate-700">المدينة</Label>
+              <div class="relative">
+                <select
+                  v-model="selectedCity"
+                  required
+                  class="w-full h-12 bg-slate-50 border-none rounded-xl px-4 font-bold text-sm appearance-none outline-none focus:ring-2 ring-red-500/20"
+                >
+                  <option disabled value="">اختر مدينة</option>
+                  <option
+                    v-for="city in branchCities"
+                    :key="city.city_id"
+                    :value="city.city_name"
+                  >
+                    {{ city.city_name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div class="space-y-2">
               <Label class="mr-2 font-bold text-slate-700">رسالتك</Label>
               <textarea
                 v-model="message"
@@ -488,6 +555,12 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 1rem center;
+  background-size: 1.2em;
+}
 @keyframes float {
   0% {
     transform: translateY(0px);

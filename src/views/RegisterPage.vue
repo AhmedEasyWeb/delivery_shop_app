@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -21,9 +21,17 @@ import {
 } from "lucide-vue-next";
 
 const loading = ref(false);
-const cities = ref<{ city_id: number; city_name: string }[]>([]);
+const branches = ref<{ branch_id: number; branch_name: string }[]>([]);
+const cities = ref<{ city_id: number; city_name: string; branch_id: number }[]>([]);
+const selectedBranch = ref("");
 const router = useRouter();
 const authStore = useAuthStore();
+
+const branchCities = computed(() => {
+  if (!selectedBranch.value) return [];
+  const branchIdNum = Number(selectedBranch.value);
+  return cities.value.filter((c: any) => c.branch_id === branchIdNum);
+});
 
 async function getDeviceId() {
   const info = await Device.getId();
@@ -82,6 +90,15 @@ async function fetchCities() {
     cities.value = res.data;
   } catch (err) {
     toast.error("فشل تحميل المدن");
+  }
+}
+
+async function fetchBranches() {
+  try {
+    const res = await api.get(`/branches`);
+    branches.value = res.data;
+  } catch (err) {
+    toast.error("فشل تحميل الفروع");
   }
 }
 
@@ -154,6 +171,7 @@ onMounted(async () => {
     router.push("/restaurant/dashboard");
   }
   fetchCities();
+  fetchBranches();
 });
 </script>
 
@@ -208,6 +226,30 @@ onMounted(async () => {
           </div>
 
           <div class="space-y-1.5">
+            <Label class="text-slate-500 mr-1 text-xs font-bold">الفرع</Label>
+            <div class="relative">
+              <select
+                v-model="selectedBranch"
+                required
+                class="w-full h-12 bg-slate-50 border-none rounded-xl px-4 font-bold text-sm appearance-none outline-none focus:ring-2 ring-red-500/20"
+                @change="form.city = ''"
+              >
+                <option disabled value="">اختر الفرع</option>
+                <option
+                  v-for="branch in branches"
+                  :key="branch.branch_id"
+                  :value="String(branch.branch_id)"
+                >
+                  {{ branch.branch_name }}
+                </option>
+              </select>
+              <MapPin
+                class="absolute left-4 top-3.5 w-5 h-5 text-slate-400 pointer-events-none"
+              />
+            </div>
+          </div>
+
+          <div class="space-y-1.5" v-if="selectedBranch">
             <Label class="text-slate-500 mr-1 text-xs font-bold">المدينة</Label>
             <div class="relative">
               <select
@@ -217,7 +259,7 @@ onMounted(async () => {
               >
                 <option disabled value="">اختر مدينة</option>
                 <option
-                  v-for="city in cities"
+                  v-for="city in branchCities"
                   :key="city.city_id"
                   :value="city.city_name"
                 >
