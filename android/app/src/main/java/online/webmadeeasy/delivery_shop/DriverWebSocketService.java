@@ -4,7 +4,16 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ServiceInfo;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.Manifest;
+import android.os.Build;
+import android.os.Bundle;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.IBinder;
@@ -16,6 +25,7 @@ import android.net.Uri;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -80,6 +90,9 @@ public class DriverWebSocketService extends Service {
     private double[] lastSentLocation = null;
     private int[] orderIds = new int[0];
 
+    private LocationManager locationManager;
+    private LocationListener locationListener;
+
     // ── Service lifecycle ────────────────────────────────────────────────────
 
     @Override
@@ -96,7 +109,11 @@ public class DriverWebSocketService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        startForeground(NOTIFICATION_ID, buildNotification("في انتظار الطلبات..."));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, buildNotification("في انتظار الطلبات..."), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+        } else {
+            startForeground(NOTIFICATION_ID, buildNotification("في انتظار الطلبات..."));
+        }
 
         if (intent == null) return START_STICKY;
 
@@ -119,10 +136,12 @@ public class DriverWebSocketService extends Service {
                 }
                 isOnline = true;
                 connect();
+                startNativeLocationTracking();
                 break;
 
             case ACTION_GO_OFFLINE:
                 isOnline = false;
+                stopNativeLocationTracking();
                 stopHeartbeat();
                 disconnectClean();
                 stopSelf();
@@ -168,6 +187,7 @@ public class DriverWebSocketService extends Service {
 
     @Override
     public void onDestroy() {
+        stopNativeLocationTracking();
         stopHeartbeat();
         disconnectClean();
         releaseLocks();
@@ -516,6 +536,12 @@ public class DriverWebSocketService extends Service {
                     showOrderAlert("طلب جاهز للاستلام ✅", "الطلب رقم #" + orderId + " جاهز الآن");
                 }
             }
+            else if ("direct_message".equals(type)) {
+                String title = data.optString("title", "رسالة إدارية");
+                String content = data.optString("content", "");
+                showOrderAlert("✉️ " + title, content);
+                Log.d(TAG, "📨 Admin direct message received: " + title);
+            }
         } catch (Exception e) {
             Log.e(TAG, "processIncomingMessage error: " + e.getMessage());
         }
@@ -559,5 +585,51 @@ public class DriverWebSocketService extends Service {
         JSONArray arr = new JSONArray();
         if (ids != null) for (int id : ids) arr.put(id);
         return arr;
+    }
+
+    private void startNativeLocationTracking() {
+        if (locationManager == null) {
+            locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        }
+        if (locationListener == null) {
+            locationListener = new LocationListener() {
+                @Override
+                public void onLocationChanged(Location location) {
+                    if (location != null) {
+                        lastLocation = new double[]{location.getLatitude(), location.getLongitude()};
+                        Log.d(TAG, "📍 Native location update: " + lastLocation[0] + ", " + lastLocation[1]);
+                        sendLocationUpdate(false);
+                    }
+                }
+                @Override
+                public void onStatusChanged(String provider, int status, Bundle extras) {}
+                @Override
+                public void onProviderEnabled(String provider) {}
+                @Override
+                public void onProviderDisabled(String provider) {}
+            };
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            try {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000, 5f, locationListener);
+                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10000, 5f, locationListener);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to request location updates: " + e.getMessage());
+            }
+        } else {
+            Log.e(TAG, "Location permissions not granted, cannot start native tracking.");
+        }
+    }
+
+    private void stopNativeLocationTracking() {
+        if (locationManager != null && locationListener != null) {
+            try {
+                locationManager.removeUpdates(locationListener);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to remove location updates: " + e.getMessage());
+            }
+        }
     }
 }

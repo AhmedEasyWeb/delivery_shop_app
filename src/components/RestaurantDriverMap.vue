@@ -37,6 +37,7 @@ const visible = ref(props.modelValue);
 const mapContainer = ref<HTMLDivElement | null>(null);
 let map: L.Map | null = null;
 let driverMarker: L.Marker | null = null;
+let hasInitialView = false;
 
 const requestDriverLocation = (id: number) => {
   props.sendMessage({
@@ -51,13 +52,26 @@ const updateDriverMarker = (location: DriverLocation) => {
 
   const { lat, lng } = location;
 
+  const customIcon = L.icon({
+    iconUrl: "/map.webp",
+    iconSize: [40, 40],
+    iconAnchor: [20, 40],
+    popupAnchor: [0, -40],
+  });
+
   if (!driverMarker) {
-    driverMarker = L.marker([lat, lng]).addTo(map);
+    driverMarker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
   } else {
     driverMarker.setLatLng([lat, lng]);
+    driverMarker.setIcon(customIcon);
   }
 
-  map.setView([lat, lng], 15);
+  // Only pan/zoom to driver on the first location update;
+  // subsequent updates only move the marker so user zoom is preserved.
+  if (!hasInitialView) {
+    map.setView([lat, lng], 15);
+    hasInitialView = true;
+  }
 };
 
 let intervalId: number | null = null;
@@ -115,15 +129,14 @@ watch(visible, async (val) => {
           '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(map);
 
-      // Force Leaflet to recalculate container size (needed inside modals/v-show)
       setTimeout(() => map?.invalidateSize(), 200);
     }
 
-    // Reset marker for new driver
     if (driverMarker) {
       driverMarker.remove();
       driverMarker = null;
     }
+    hasInitialView = false;
 
     requestDriverLocation(props.driverId);
     startLocationInterval(props.driverId);

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useDriverTracker } from "@/composables/useDriverTraker";
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
+import { useMessagesStore } from "@/stores/messages";
 import { useRouter } from "vue-router";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrderHistory from "@/components/OrderHistory.vue";
 import DriverTab from "@/components/DriverTab.vue";
+import DriverMessages from "@/components/DriverMessages.vue";
 
 import {
   Dialog,
@@ -24,17 +26,46 @@ import {
   DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+// Support & Payment Components
+import SupportDialog from "@/components/support/SupportDialog.vue";
+import ContactInfo from "@/components/support/ContactInfo.vue";
+import api from "@/api/axios";
+
 const openWorkInstructions = ref(false);
 const showBatteryModal = ref(false);
+const showSupportDialog = ref(false);
 
 const { isOnline, goOnline, goOffline } = useDriverTracker();
 const authStore = useAuthStore();
+const messagesStore = useMessagesStore();
 const router = useRouter();
 const activeTab = ref("current-orders");
+
+const branchName = ref("");
+const driverSupportPhone = ref("");
+const driverPaymentPhone = ref("");
+const loadingSupport = ref(false);
+
+const fetchSupportNumbers = async () => {
+  loadingSupport.value = true;
+  try {
+    const res = await api.get("/driver/support-numbers/contact");
+    branchName.value = res.data.branch_name || "";
+    driverSupportPhone.value = res.data.driver_support_phone || "";
+    driverPaymentPhone.value = res.data.driver_payment_phone || "";
+  } catch (error) {
+    console.error("Failed to fetch support numbers", error);
+  } finally {
+    loadingSupport.value = false;
+  }
+};
 
 const refreshData = async () => {
   await goOffline();
   await goOnline();
+  messagesStore.fetchMessages();
+  fetchSupportNumbers();
 };
 
 onMounted(async () => {
@@ -43,6 +74,8 @@ onMounted(async () => {
     authStore.logout();
     router.push("/");
   }
+  messagesStore.fetchMessages();
+  fetchSupportNumbers();
   openWorkInstructions.value = true;
 });
 
@@ -218,7 +251,7 @@ function redirectToWhatsApp(phone: string) {
     <main class="max-w-md mx-auto">
       <div class="px-4 py-2 grid grid-cols-2 gap-2">
         <Button
-          @click="redirectToWhatsApp('+201214555196')"
+          @click="showSupportDialog = true"
           class="w-full h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black shadow-lg shadow-emerald-100 flex items-center justify-center gap-2"
         >
           <MessageCircle class="w-5 h-5" />
@@ -241,19 +274,37 @@ function redirectToWhatsApp(phone: string) {
       >
         <div class="px-4">
           <TabsList
-            class="grid w-full grid-cols-2 h-14 bg-slate-200/50 rounded-2xl p-1"
+            class="grid w-full grid-cols-4 h-14 bg-slate-200/50 rounded-2xl p-1"
           >
             <TabsTrigger
               value="current-orders"
-              class="rounded-xl font-black data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm"
+              class="rounded-xl font-black data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm text-xs md:text-sm animate-in fade-in"
             >
-              الطلبات الحالية
+              الطلبات
             </TabsTrigger>
             <TabsTrigger
               value="order-history"
-              class="rounded-xl font-black data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm"
+              class="rounded-xl font-black data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm text-xs md:text-sm animate-in fade-in"
             >
-              سجل الطلبات
+              السجل
+            </TabsTrigger>
+            <TabsTrigger
+              value="messages"
+              class="relative rounded-xl font-black data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm text-xs md:text-sm animate-in fade-in"
+            >
+              الرسائل
+              <span
+                v-if="messagesStore.messages.length > 0"
+                class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold shadow-sm"
+              >
+                {{ messagesStore.messages.length }}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="payment"
+              class="rounded-xl font-black data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm text-xs md:text-sm animate-in fade-in"
+            >
+              المدفوعات
             </TabsTrigger>
           </TabsList>
         </div>
@@ -271,8 +322,119 @@ function redirectToWhatsApp(phone: string) {
           >
             <OrderHistory />
           </TabsContent>
+          <TabsContent
+            value="messages"
+            class="animate-in fade-in slide-in-from-bottom-4 duration-300"
+          >
+            <DriverMessages />
+          </TabsContent>
+          <TabsContent
+            value="payment"
+            class="animate-in fade-in slide-in-from-bottom-4 duration-300"
+          >
+            <!-- Inner sub-tabs: Payment / Support -->
+            <Tabs default-value="sub-payment" dir="rtl" class="w-full">
+              <TabsList
+                class="grid w-full grid-cols-2 h-12 bg-slate-100 rounded-2xl p-1 mb-4"
+              >
+                <TabsTrigger
+                  value="sub-payment"
+                  class="rounded-xl font-black text-sm data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm"
+                >
+                  💳 المدفوعات
+                </TabsTrigger>
+                <TabsTrigger
+                  value="sub-support"
+                  class="rounded-xl font-black text-sm data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm"
+                >
+                  🎧 الدعم الفني
+                </TabsTrigger>
+              </TabsList>
+
+              <!-- Payment sub-tab -->
+              <TabsContent
+                value="sub-payment"
+                class="animate-in fade-in duration-300"
+              >
+                <div
+                  class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-5"
+                >
+                  <div class="text-right">
+                    <h3 class="font-black text-base text-slate-900">
+                      تحصيل الحسابات والمدفوعات
+                    </h3>
+                    <p class="text-slate-400 text-xs mt-1">
+                      حسابات فرع {{ branchName }}
+                    </p>
+                  </div>
+                  
+                  <div
+                    v-if="loadingSupport"
+                    class="text-center text-slate-500 py-4"
+                  >
+                    جاري تحميل الأرقام...
+                  </div>
+                  <div
+                    v-else-if="driverPaymentPhone"
+                    class="animate-in fade-in slide-in-from-bottom-4 duration-300 space-y-3"
+                  >
+                    <ContactInfo
+                      :phone="driverPaymentPhone"
+                      :branch-name="branchName"
+                      type="payment"
+                    />
+                  </div>
+                  <div v-else class="text-center text-slate-500 py-4">
+                    لا يوجد أرقام حسابات متاحة لفرعك
+                  </div>
+                </div>
+              </TabsContent>
+
+              <!-- Support sub-tab -->
+              <TabsContent
+                value="sub-support"
+                class="animate-in fade-in duration-300"
+              >
+                <div
+                  class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-5"
+                >
+                  <div class="text-right">
+                    <h3 class="font-black text-base text-slate-900">
+                      التواصل مع الدعم الفني
+                    </h3>
+                    <p class="text-slate-400 text-xs mt-1">
+                      دعم فرع {{ branchName }}
+                    </p>
+                  </div>
+                  
+                  <div
+                    v-if="loadingSupport"
+                    class="text-center text-slate-500 py-4"
+                  >
+                    جاري تحميل الأرقام...
+                  </div>
+                  <div
+                    v-else-if="driverSupportPhone"
+                    class="animate-in fade-in slide-in-from-bottom-4 duration-300"
+                  >
+                    <ContactInfo
+                      :phone="driverSupportPhone"
+                      :branch-name="branchName"
+                      type="support"
+                    />
+                  </div>
+                  <div v-else class="text-center text-slate-500 py-4">
+                    لا يوجد أرقام دعم فني متاحة لفرعك
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
         </div>
       </Tabs>
     </main>
+
+    <!-- Support Dialog Component -->
+    <SupportDialog v-model:open="showSupportDialog" />
   </div>
 </template>

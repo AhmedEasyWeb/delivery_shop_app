@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import EditOrders from "@/components/EditOrders.vue";
 import RestaurantDriverMap from "@/components/RestaurantDriverMap.vue";
-import { computed, onMounted, ref, watch } from "vue";
-import { Clock, CheckCircle, MessageCircle } from "lucide-vue-next";
+import { computed, onMounted, ref, watch, onUnmounted } from "vue";
+import { Clock, CheckCircle } from "lucide-vue-next";
 import Header from "@/components/Header.vue";
 import OrderCard from "@/components/OrderCard.vue";
 import {
@@ -59,12 +59,11 @@ const totalPages = computed(() =>
 
 const fetchTodayOrders = async () => {
   loading.value = true;
-  const date = new Date();
-  const today = date.toISOString().split("T")[0];
 
   try {
-    const res = await api.get(`/orders?from=${today}&to=${today}`);
+    const res = await api.get(`/orders?active=true`);
     orders.value = res.data.orders || [];
+    console.log(res.data);
   } catch (err: any) {
     error.value = err.message || "Failed to fetch orders";
   } finally {
@@ -91,10 +90,21 @@ const fetchStats = async () => {
 
 const { startTimers } = useOrderTimers(orders, sendMessage);
 
+let refreshInterval: any;
+
 onMounted(async () => {
   await fetchTodayOrders();
   await fetchStats();
   startTimers();
+
+  refreshInterval = setInterval(async () => {
+    await fetchTodayOrders();
+    await fetchStats();
+  }, 40000);
+});
+
+onUnmounted(() => {
+  if (refreshInterval) clearInterval(refreshInterval);
 });
 
 let processedMessagesCount = 0;
@@ -157,6 +167,20 @@ watch(
   },
   { immediate: true, deep: true },
 );
+
+const handleStatusUpdated = (orderId: number, newStatus: string) => {
+  orders.value = orders.value.map((order) =>
+    order.order_id === orderId ? { ...order, order_status: newStatus } : order,
+  );
+};
+
+const handleCostUpdated = (orderId: number, newCost: number) => {
+  orders.value = orders.value.map((order) =>
+    order.order_id === orderId
+      ? { ...order, order_delivery_cost: newCost }
+      : order,
+  );
+};
 </script>
 <template>
   <Header />
@@ -185,7 +209,7 @@ watch(
           <CheckCircle class="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div class="text-2xl font-bold text-green-500">
+          <div class="text-2xl font-bold text-primary">
             {{ completedToday }}
           </div>
           <p class="text-xs text-muted-foreground">طلبات تم تسليمها</p>
@@ -219,6 +243,8 @@ watch(
               }
             "
             @show-driver-location="handleShowDriverLocation"
+            @status-updated="handleStatusUpdated"
+            @cost-updated="handleCostUpdated"
           />
 
           <div v-if="!orders.length" class="text-center py-8">
@@ -237,21 +263,15 @@ watch(
       </CardContent>
     </Card>
   </div>
-  <EditOrders v-model:open="editDialogOpen" :order="selectedOrder" />
+  <EditOrders
+    v-model:open="editDialogOpen"
+    :order="selectedOrder"
+    @update="fetchTodayOrders"
+  />
   <RestaurantDriverMap
     v-model="showDriverMap"
     :driverId="selectedDriverId"
     :messages="messages"
     :sendMessage="sendMessage"
   />
-
-  <!-- WhatsApp Support Button -->
-  <a
-    href="https://wa.me/+201214555193"
-    target="_blank"
-    class="fixed bottom-6 left-6 z-50 flex items-center gap-2 bg-[#25D366] text-white px-4 py-3 rounded-full shadow-lg hover:bg-[#128C7E] transition-all transform hover:scale-105"
-  >
-    <MessageCircle class="h-5 w-5" />
-    <span class="font-medium text-sm">تواصل مع الدعم</span>
-  </a>
 </template>

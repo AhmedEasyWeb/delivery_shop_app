@@ -232,6 +232,11 @@ watch(currentPage, async (newPage, oldPage) => {
                     >
                     <p class="text-sm font-medium">{{ order.order_notes }}</p>
                   </div>
+                  <div v-if="order.order_status === 'canceled' && order.cancelation_reason" class="sm:col-span-2 p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg flex flex-col gap-1 text-rose-700 dark:text-rose-400">
+                    <span class="text-xs font-semibold">
+                      تم إلغاء هذا الطلب بسبب: <span class="font-extrabold text-rose-800 dark:text-rose-300">{{ order.cancelation_reason }}</span>
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

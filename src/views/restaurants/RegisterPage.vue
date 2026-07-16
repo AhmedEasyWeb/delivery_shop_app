@@ -31,6 +31,7 @@ import {
 } from "lucide-vue-next";
 import Textarea from "@/components/ui/textarea/Textarea.vue";
 import api from "@/api/axios";
+import MainHeader from "@/components/MainHeader.vue";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -134,8 +135,9 @@ onMounted(async () => {
 </script>
 
 <template>
+  <MainHeader />
   <div
-    class="min-h-screen flex items-center justify-center bg-slate-50 p-4 font-sans"
+    class="min-h-screen flex items-center justify-center bg-background p-4 font-sans"
     dir="rtl"
   >
     <Card class="w-full max-w-2xl shadow-lg border-t-4 border-t-primary">
@@ -210,7 +212,7 @@ onMounted(async () => {
                     v-model="formData.location"
                     readonly
                     placeholder="اضغط الزر"
-                    class="bg-gray-50"
+                    class="bg-muted"
                   />
                   <Button
                     type="button"
@@ -248,7 +250,7 @@ onMounted(async () => {
               <div class="space-y-2">
                 <Label>رقم الهاتف (اسم المستخدم)</Label>
                 <div class="relative">
-                  <Phone class="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                  <Phone class="absolute right-3 top-3 w-4 h-4 text-muted-foreground" />
                   <Input
                     v-model="formData.phone"
                     class="pr-9"
@@ -260,7 +262,7 @@ onMounted(async () => {
               <div class="space-y-2">
                 <Label>كلمة المرور</Label>
                 <div class="relative">
-                  <Lock class="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                  <Lock class="absolute right-3 top-3 w-4 h-4 text-muted-foreground" />
                   <Input
                     type="password"
                     v-model="formData.password"
@@ -278,7 +280,7 @@ onMounted(async () => {
             <div
               @click="fileInput?.click()"
               class="border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-slate-50 transition-colors"
-              :class="logoPhotoPreview ? 'border-primary' : 'border-gray-300'"
+              :class="logoPhotoPreview ? 'border-primary' : 'border-border'"
             >
               <input
                 type="file"
@@ -292,7 +294,7 @@ onMounted(async () => {
                 <div class="bg-primary/10 p-3 rounded-full">
                   <Upload class="w-6 h-6 text-primary" />
                 </div>
-                <p class="text-sm text-gray-500">اضغط لرفع شعار المطعم</p>
+                <p class="text-sm text-muted-foreground">اضغط لرفع شعار المطعم</p>
               </template>
 
               <img
@@ -313,7 +315,7 @@ onMounted(async () => {
           </Button>
         </form>
 
-        <div class="mt-6 text-center text-gray-600">
+        <div class="mt-6 text-center text-muted-foreground">
           لديك حساب بالفعل؟
           <Button
             variant="link"

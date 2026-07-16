@@ -107,9 +107,9 @@ async function handleLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-white flex flex-col font-sans" dir="rtl">
+  <div class="min-h-screen bg-background flex flex-col font-sans" dir="rtl">
     <div
-      class="p-4 flex items-center justify-between bg-white border-b border-slate-50 sticky top-0 z-10"
+      class="p-4 flex items-center justify-between bg-background border-b border-border sticky top-0 z-10"
     >
       <Button
         variant="ghost"
@@ -117,14 +117,14 @@ async function handleLogin() {
         @click="router.push('/landing')"
         class="rounded-full"
       >
-        <ArrowRight class="w-6 h-6 text-slate-800" />
+        <ArrowRight class="w-6 h-6 text-foreground" />
       </Button>
-      <h1 class="font-black text-lg text-slate-900">دخول الطيارين</h1>
+      <h1 class="font-black text-lg text-foreground">دخول الطيارين</h1>
       <Button
         variant="ghost"
         size="sm"
         @click="router.push('/restaurant')"
-        class="text-red-600 font-bold"
+        class="text-primary font-bold"
       >
         المطاعم
       </Button>
@@ -132,12 +132,12 @@ async function handleLogin() {
 
     <div class="px-6 pt-10 pb-6">
       <div
-        class="bg-red-50 w-16 h-16 rounded-[22px] flex items-center justify-center mb-6"
+        class="bg-primary/10 w-16 h-16 rounded-[22px] flex items-center justify-center mb-6"
       >
-        <Smartphone class="w-8 h-8 text-red-600" />
+        <Smartphone class="w-8 h-8 text-primary" />
       </div>
-      <h2 class="text-3xl font-black text-slate-900 mb-2">أهلاً بك مجدداً</h2>
-      <p class="text-slate-500 font-medium leading-relaxed">
+      <h2 class="text-3xl font-black text-foreground mb-2">أهلاً بك مجدداً</h2>
+      <p class="text-muted-foreground font-medium leading-relaxed">
         سجل دخولك وابدأ رحلة التوصيل. سيُطلب منك أخذ صورة سيلفي سريعة للتأكد من
         هويتك.
       </p>
@@ -146,7 +146,7 @@ async function handleLogin() {
     <div class="flex-1 px-6 space-y-6">
       <form @submit.prevent="handleLogin" class="space-y-5">
         <div class="space-y-1.5">
-          <Label for="phone" class="mr-2 text-slate-700 font-bold text-sm"
+          <Label for="phone" class="mr-2 text-foreground font-bold text-sm"
             >رقم الهاتف</Label
           >
           <div class="relative">
@@ -155,16 +155,16 @@ async function handleLogin() {
               type="tel"
               v-model="phone"
               placeholder="07xx xxx xxxx"
-              class="h-14 rounded-2xl bg-slate-50 border-none px-5 text-lg font-bold focus-visible:ring-red-500 transition-all"
+              class="h-14 rounded-2xl bg-muted border-none px-5 text-lg font-bold focus-visible:ring-primary transition-all"
             />
           </div>
         </div>
 
         <div class="space-y-1.5">
-          <Label class="mr-2 text-slate-700 font-bold text-sm">نوع العمل</Label>
+          <Label class="mr-2 text-foreground font-bold text-sm">نوع العمل</Label>
           <Select v-model="isFreelancer">
             <SelectTrigger
-              class="h-14 rounded-2xl bg-slate-50 border-none px-5 text-right font-bold text-slate-800 focus:ring-red-500"
+              class="h-14 rounded-2xl bg-muted border-none px-5 text-right font-bold text-foreground focus:ring-primary"
             >
               <SelectValue />
             </SelectTrigger>
@@ -183,12 +183,12 @@ async function handleLogin() {
           v-if="isFreelancer === 'yes'"
           class="space-y-1.5 animate-in fade-in slide-in-from-top-2"
         >
-          <Label class="mr-2 text-slate-700 font-bold text-sm"
+          <Label class="mr-2 text-foreground font-bold text-sm"
             >مدة الوردية</Label
           >
           <Select v-model="shift">
             <SelectTrigger
-              class="h-14 rounded-2xl bg-slate-100 border-none px-5 text-right font-bold"
+              class="h-14 rounded-2xl bg-muted border-none px-5 text-right font-bold"
             >
               <SelectValue />
             </SelectTrigger>
@@ -201,7 +201,7 @@ async function handleLogin() {
         </div>
 
         <div class="space-y-1.5">
-          <Label for="password" class="mr-2 text-slate-700 font-bold text-sm"
+          <Label for="password" class="mr-2 text-foreground font-bold text-sm"
             >كلمة السر</Label
           >
           <Input
@@ -209,7 +209,7 @@ async function handleLogin() {
             type="password"
             v-model="password"
             placeholder="••••••••"
-            class="h-14 rounded-2xl bg-slate-50 border-none px-5 text-lg focus-visible:ring-red-500"
+            class="h-14 rounded-2xl bg-muted border-none px-5 text-lg focus-visible:ring-primary"
           />
         </div>
 
@@ -218,7 +218,7 @@ async function handleLogin() {
         <div class="pt-4">
           <Button
             type="submit"
-            class="w-full h-15 rounded-[22px] bg-red-600 hover:bg-red-700 text-white text-xl font-black shadow-lg shadow-red-100 active:scale-[0.98] transition-all py-7"
+            class="w-full h-15 rounded-[22px] bg-primary hover:bg-primary/90 text-primary-foreground text-xl font-black shadow-lg shadow-primary/20 active:scale-[0.98] transition-all py-7"
             :disabled="loading"
           >
             <template v-if="loading">
@@ -236,19 +236,19 @@ async function handleLogin() {
       <div class="pb-10">
         <button
           @click="router.push('/register')"
-          class="w-full flex items-center justify-between p-5 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors group"
+          class="w-full flex items-center justify-between p-5 rounded-2xl bg-muted hover:bg-muted/70 transition-colors group"
         >
           <div class="flex items-center gap-4">
-            <div class="bg-white p-2 rounded-xl shadow-sm">
-              <UserCircle class="w-6 h-6 text-slate-600" />
+            <div class="bg-background p-2 rounded-xl shadow-sm">
+              <UserCircle class="w-6 h-6 text-muted-foreground" />
             </div>
             <div class="text-right">
-              <p class="font-black text-slate-900">ليس لديك حساب؟</p>
-              <p class="text-xs text-slate-500 font-bold">انضم لعائلتنا الآن</p>
+              <p class="font-black text-foreground">ليس لديك حساب؟</p>
+              <p class="text-xs text-muted-foreground font-bold">انضم لعائلتنا الآن</p>
             </div>
           </div>
           <ChevronRight
-            class="w-5 h-5 text-slate-400 group-hover:-translate-x-1 transition-transform"
+            class="w-5 h-5 text-muted-foreground group-hover:-translate-x-1 transition-transform"
           />
         </button>
       </div>

@@ -1,6 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8" ?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
@@ -38,8 +37,10 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
-
-        <meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version" />
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version"
+        />
 
         <activity
             android:name=".MainActivity"
@@ -48,7 +49,6 @@
             android:exported="true"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation">
-            
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -65,15 +65,14 @@
             android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
 
         <service
             android:name="com.captain.backgroundgeolocation.BackgroundGeolocationService"
             android:exported="false"
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="location"
+        />
 
         <receiver
             android:name="com.captain.backgroundgeolocation.BootReceiver"
@@ -89,17 +88,20 @@
             android:name=".DriverWebSocketService"
             android:exported="false"
             android:stopWithTask="false"
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="location"
+        />
 
         <service
             android:name="com.capawesome.foreground.ForegroundService"
             android:exported="false"
             android:stopWithTask="false"
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="location"
+        />
 
         <receiver
             android:name="com.capacitorjs.plugins.localnotifications.LocalNotificationReceiver"
-            android:exported="false" />
+            android:exported="false"
+        />
 
         <receiver
             android:name="com.capacitorjs.plugins.localnotifications.LocalNotificationRestoreReceiver"
@@ -111,7 +113,7 @@
 
         <service
             android:name="com.capacitorjs.plugins.localnotifications.LocalNotificationService"
-            android:exported="false" />
-
+            android:exported="false"
+        />
     </application>
 </manifest>

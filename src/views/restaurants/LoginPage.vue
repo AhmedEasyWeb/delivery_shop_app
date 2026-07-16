@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Button } from "@/components/ui/button";
+import MainHeader from "@/components/MainHeader.vue";
 import {
   Card,
   CardContent,
@@ -49,79 +50,82 @@ async function handleLogin() {
 </script>
 
 <template>
-  <main
-    dir="rtl"
-    class="flex min-h-screen items-center justify-center bg-slate-50 p-4 font-sans"
-  >
-    <Card class="w-full max-w-md shadow-lg border-t-4 border-t-primary">
-      <CardHeader class="text-center space-y-1">
-        <CardTitle class="text-2xl font-bold">تسجيل دخول المطعم</CardTitle>
-        <CardDescription>
-          أدخل بيانات حسابك للمتابعة إلى لوحة التحكم
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form class="grid gap-5" @submit.prevent="handleLogin">
-          <div class="grid gap-2">
-            <Label for="phone">رقم الهاتف</Label>
-            <div class="relative">
-              <Phone
-                class="absolute right-3 top-3 w-4 h-4 text-muted-foreground"
-              />
-              <Input
-                id="phone"
-                type="text"
-                placeholder="05xxxxxxxx"
-                v-model="phone"
-                class="pr-9"
-                required
-              />
+  <div class="min-h-screen bg-background font-sans text-right" dir="rtl">
+    <MainHeader />
+    <main
+      dir="rtl"
+      class="flex min-h-screen items-center justify-center bg-background p-4 font-sans"
+    >
+      <Card class="w-full max-w-md shadow-lg border-t-4 border-t-primary">
+        <CardHeader class="text-center space-y-1">
+          <CardTitle class="text-2xl font-bold">تسجيل دخول المطعم</CardTitle>
+          <CardDescription>
+            أدخل بيانات حسابك للمتابعة إلى لوحة التحكم
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form class="grid gap-5" @submit.prevent="handleLogin">
+            <div class="grid gap-2">
+              <Label for="phone">رقم الهاتف</Label>
+              <div class="relative">
+                <Phone
+                  class="absolute right-3 top-3 w-4 h-4 text-muted-foreground"
+                />
+                <Input
+                  id="phone"
+                  type="text"
+                  placeholder="05xxxxxxxx"
+                  v-model="phone"
+                  class="pr-9"
+                  required
+                />
+              </div>
             </div>
-          </div>
 
-          <div class="grid gap-2">
-            <div class="flex items-center justify-between">
-              <Label for="password">كلمة المرور</Label>
-              <Button variant="link" class="px-0 font-normal text-xs h-auto"
-                >نسيت كلمة المرور؟</Button
-              >
+            <div class="grid gap-2">
+              <div class="flex items-center justify-between">
+                <Label for="password">كلمة المرور</Label>
+                <Button variant="link" class="px-0 font-normal text-xs h-auto"
+                  >نسيت كلمة المرور؟</Button
+                >
+              </div>
+              <div class="relative">
+                <Lock
+                  class="absolute right-3 top-3 w-4 h-4 text-muted-foreground"
+                />
+                <Input
+                  id="password"
+                  type="password"
+                  v-model="password"
+                  class="pr-9"
+                  placeholder="********"
+                  required
+                />
+              </div>
             </div>
-            <div class="relative">
-              <Lock
-                class="absolute right-3 top-3 w-4 h-4 text-muted-foreground"
-              />
-              <Input
-                id="password"
-                type="password"
-                v-model="password"
-                class="pr-9"
-                placeholder="********"
-                required
-              />
-            </div>
-          </div>
 
-          <Button
-            type="submit"
-            class="w-full h-11 text-lg font-semibold"
-            :disabled="loading"
-          >
-            <Loader v-if="loading" class="animate-spin ml-2" />
-            <span v-else>دخول</span>
-          </Button>
-
-          <div class="text-center text-sm text-muted-foreground">
-            ليس لديك حساب؟
             <Button
-              variant="link"
-              @click="router.push('/restaurant/register')"
-              class="p-0 h-auto font-bold text-primary"
+              type="submit"
+              class="w-full h-11 text-lg font-semibold"
+              :disabled="loading"
             >
-              سجل مطعمك الآن
+              <Loader v-if="loading" class="animate-spin ml-2" />
+              <span v-else>دخول</span>
             </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
-  </main>
+
+            <div class="text-center text-sm text-muted-foreground">
+              ليس لديك حساب؟
+              <Button
+                variant="link"
+                @click="router.push('/restaurant/register')"
+                class="p-0 h-auto font-bold text-primary"
+              >
+                سجل مطعمك الآن
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </main>
+  </div>
 </template>

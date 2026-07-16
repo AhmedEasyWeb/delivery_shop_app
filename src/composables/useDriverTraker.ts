@@ -2,6 +2,7 @@ import { ref, onBeforeUnmount, onMounted, watch } from "vue";
 import { registerPlugin } from "@capacitor/core";
 import { useAuthStore } from "@/stores/auth";
 import { useOrdersStore } from "@/stores/orders";
+import { useMessagesStore } from "@/stores/messages";
 import { toast } from "vue-sonner";
 import { Capacitor } from "@capacitor/core";
 
@@ -200,6 +201,29 @@ export function useDriverTracker() {
         } else {
           ordersStore.updateOrderStatus(orderId, orderStatus);
         }
+      }
+    }
+
+    if (data.type === "direct_message") {
+      let msg = data;
+      if (typeof msg === "string") {
+        try { msg = JSON.parse(msg); } catch (e) {}
+      }
+      if (msg) {
+        try {
+          const audio = new Audio("/notification.wav");
+          audio.play().catch((e) => console.log("Sound blocked or error:", e));
+        } catch (err) {}
+
+        const messagesStore = useMessagesStore();
+        messagesStore.addMessage({
+          message_id: Number(msg.message_id),
+          driver_id: msg.driver_id ? Number(msg.driver_id) : null,
+          title: msg.title,
+          content: msg.content,
+          created_at: msg.created_at || new Date().toISOString(),
+        });
+        toast.info(`رسالة إدارية جديدة: ${msg.title}`);
       }
     }
   }

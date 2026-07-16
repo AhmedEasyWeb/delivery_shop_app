@@ -1,325 +1,186 @@
-<script lang="ts" setup>
+<script setup lang="ts">
+import { useAuthStore } from "@/stores/auth";
+import { onMounted, ref, watch } from "vue";
+import { useRouter } from "vue-router";
 import {
-  Award,
-  BookUser,
-  Home,
-  Motorbike,
-  UserRound,
   Menu,
-  PackageCheck,
-  ScanFace,
-  Stamp,
-  Utensils,
+  Home,
+  ShoppingBag,
   LogOut,
-  ChevronDown,
-  UserCircle,
+  BarChart,
+  MessageCircle,
 } from "lucide-vue-next";
-import { onMounted, ref } from "vue";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
+  SheetDescription,
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { useAuthStore } from "@/stores/auth";
-import { useRouter } from "vue-router";
+import { Separator } from "@/components/ui/separator";
+import CreateOrders from "./CreateOrders.vue";
+import { useWebSocket } from "@/composables/useWebSocket";
+import { useOrderTimers } from "@/composables/useOrderTimer";
+import SupportDialog from "./support/SupportDialog.vue";
 
 const auth = useAuthStore();
 const router = useRouter();
-const currentHashUrl = ref("#hero");
-const driverOpen = ref(false);
-const restaurantOpen = ref(false);
-
-const routes = [
-  { title: "الرئيسية", url: "hero", icon: Home },
-  { title: "من نحن", url: "about", icon: UserRound },
-  { title: "خدماتنا", url: "service", icon: Motorbike },
-  { title: "لماذا نحن", url: "why_us", icon: Award },
-  { title: "تواصل معنا", url: "contact", icon: BookUser },
-];
 
 onMounted(async () => {
-  await auth.checkSession();
-  await auth.checkRestaurantSession();
+  await auth.init();
+
+  if (!auth.isAuthenticated) {
+    auth.logout();
+    router.push("/restaurant");
+  }
 });
 
-function goToHash(uri: string) {
-  window.location.hash = `#${uri}`;
-  currentHashUrl.value = `#${uri}`;
-}
+const { sendMessage, init } = useWebSocket(auth.user?.restaurant_id || 0);
+const { startTimers } = useOrderTimers(ref([]), sendMessage);
 
-const handleLogout = async () => {
-  await auth.logout();
-  router.push("/");
+watch(
+  () => auth.user?.restaurant_id,
+  (newId) => {
+    if (newId) {
+      init(newId);
+      startTimers();
+    }
+  },
+  { immediate: true },
+);
+
+const isDrawerOpen = ref(false);
+const showSupportDialog = ref(false);
+
+const handleLogout = () => {
+  auth.logout();
+  router.push("/restaurant");
+  isDrawerOpen.value = false;
 };
-</script>
 
+const menuItems = [
+  { icon: Home, label: "الرئيسية", path: "/restaurant/dashboard" },
+  { icon: ShoppingBag, label: "الطلبات", path: "/restaurant/orders" },
+  { icon: BarChart, label: "التقارير", path: "/restaurant/reports" },
+];
+</script>
 <template>
-  <header
-    class="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-slate-100"
-  >
-    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-      <div
-        class="flex items-center gap-2 select-none cursor-pointer"
-        @click="router.push('/')"
-      >
-        <img src="/logo.webp" alt="Delivery Shop Logo" class="h-10" />
-        <span class="text-xl font-black text-slate-900 tracking-tight"
-          >Delivery<span class="text-red-600">Shop</span></span
+  <header class="sticky top-0 z-50 w-full border-b border-border bg-background">
+    <div
+      class="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-4 sm:px-6"
+    >
+      <div class="flex items-center gap-4">
+        <div
+          class="h-10 w-10 overflow-hidden rounded-lg border border-border shadow-sm"
         >
+          <img
+            :src="auth.user?.logo_image || '/default-restaurant-logo.png'"
+            alt="Restaurant Logo"
+            class="h-full w-full object-cover"
+          />
+        </div>
+        <div class="flex flex-col">
+          <span class="text-sm font-bold leading-none text-foreground">
+            {{ auth.user?.name }}
+          </span>
+          <span
+            class="mt-1 text-[11px] font-medium text-muted-foreground uppercase tracking-tight"
+          >
+            لوحة الإدارة
+          </span>
+        </div>
       </div>
 
-      <nav class="hidden md:flex items-center gap-1">
-        <button
-          v-for="route in routes"
-          :key="route.url"
-          @click="goToHash(route.url)"
-          :class="[
-            'px-4 py-2 rounded-full text-sm font-bold transition-all',
-            currentHashUrl === `#${route.url}`
-              ? 'bg-red-50 text-red-600'
-              : 'text-slate-600 hover:bg-slate-50',
-          ]"
-        >
-          {{ route.title }}
-        </button>
-
-        <div class="h-6 w-px bg-slate-200 mx-2"></div>
-
-        <div class="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                class="rounded-full font-bold text-slate-700"
-                >الطيارين <ChevronDown class="mr-1 w-4 h-4 opacity-50"
-              /></Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              class="w-48 rounded-2xl p-2 shadow-xl border-slate-100"
-            >
-              <template v-if="auth.isAuthenticated && auth.type === 'driver'">
-                <DropdownMenuItem
-                  @click="router.push('/driver-panel')"
-                  class="rounded-xl p-3 font-bold cursor-pointer"
-                  >الملف الشخصي</DropdownMenuItem
-                >
-                <DropdownMenuItem
-                  @click="handleLogout"
-                  class="rounded-xl p-3 font-bold text-red-600 cursor-pointer"
-                  >تسجيل الخروج</DropdownMenuItem
-                >
-              </template>
-              <template v-else>
-                <DropdownMenuItem
-                  @click="router.push('/')"
-                  class="rounded-xl p-3 font-bold cursor-pointer"
-                  >تسجيل دخول</DropdownMenuItem
-                >
-                <DropdownMenuItem
-                  @click="router.push('/register')"
-                  class="rounded-xl p-3 font-bold cursor-pointer"
-                  >إنشاء حساب</DropdownMenuItem
-                >
-              </template>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      <div class="flex items-center gap-3">
+        <div class="hidden sm:block">
+          <CreateOrders />
         </div>
-      </nav>
 
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            class="md:hidden rounded-xl bg-slate-50"
-          >
-            <Menu class="w-6 h-6 text-slate-900" />
-          </Button>
-        </SheetTrigger>
+        <div class="h-6 w-px bg-border mx-1 hidden sm:block"></div>
 
-        <SheetContent
-          side="left"
-          class="w-[300px] p-0 border-none bg-slate-50"
-          dir="rtl"
-        >
-          <div class="flex flex-col h-full">
-            <SheetHeader
-              class="p-6 bg-white border-b border-slate-100 text-right"
-            >
-              <SheetTitle class="text-2xl font-black text-slate-900"
-                >Delivery <span class="text-red-600">Shop</span></SheetTitle
-              >
-            </SheetHeader>
+        <Sheet v-model:open="isDrawerOpen">
+          <SheetTrigger as-child>
+            <Button variant="outline" size="sm" class="flex gap-2 font-medium">
+              <Menu class="h-4 w-4" />
+              <span>القائمة</span>
+            </Button>
+          </SheetTrigger>
 
-            <div class="flex-1 overflow-y-auto p-4 space-y-2">
-              <p
-                class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 mb-2"
-              >
-                التنقل
-              </p>
-              <a
-                v-for="route in routes"
-                :key="route.url"
-                :href="'#' + route.url"
-                class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-slate-700 font-bold hover:bg-white active:scale-95 transition-all"
-                :class="
-                  currentHashUrl === `#${route.url}`
-                    ? 'bg-red-50 text-red-600 shadow-sm shadow-red-100'
-                    : ''
-                "
-                @click="currentHashUrl = `#${route.url}`"
-              >
-                <component :is="route.icon" class="w-5 h-5" />
-                {{ route.title }}
-              </a>
-
-              <div class="my-4 border-t border-slate-200/60"></div>
-
-              <p
-                class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 mb-2"
-              >
-                بوابة الشركاء
-              </p>
-
-              <div
-                class="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100"
-              >
-                <button
-                  @click="driverOpen = !driverOpen"
-                  class="w-full flex items-center justify-between p-4 font-bold text-slate-800"
-                >
-                  <div class="flex items-center gap-4">
-                    <PackageCheck class="w-5 h-5 text-blue-500" /> الطيارين
-                  </div>
-                  <ChevronDown
-                    :class="[
-                      'w-4 h-4 transition-transform',
-                      driverOpen ? 'rotate-180' : '',
-                    ]"
+          <SheetContent side="right" class="w-[300px] p-0" dir="rtl">
+            <div class="flex flex-col h-full bg-card">
+              <div class="p-6 border-b border-border bg-muted/30">
+                <div class="flex items-center gap-3">
+                  <img
+                    :src="
+                      auth.user?.logo_image || '/default-restaurant-logo.png'
+                    "
+                    alt="Logo"
+                    class="h-12 w-12 rounded-lg border border-border bg-background object-cover shadow-sm"
                   />
-                </button>
-                <div v-if="driverOpen" class="bg-slate-50/50 p-2 space-y-1">
-                  <template
-                    v-if="auth.isAuthenticated && auth.type === 'driver'"
-                  >
-                    <button
-                      @click="router.push('/driver-panel')"
-                      class="w-full text-right p-3 rounded-xl hover:bg-white font-medium text-slate-600"
+                  <div class="text-right">
+                    <SheetTitle class="text-base font-bold">{{
+                      auth.user?.name
+                    }}</SheetTitle>
+                    <SheetDescription class="text-xs"
+                      >مدير النظام</SheetDescription
                     >
-                      الملف الشخصي
-                    </button>
-                    <button
-                      @click="handleLogout"
-                      class="w-full text-right p-3 rounded-xl hover:bg-white font-bold text-red-500"
-                    >
-                      تسجيل الخروج
-                    </button>
-                  </template>
-                  <template v-else>
-                    <button
-                      @click="router.push('/')"
-                      class="w-full text-right p-3 rounded-xl hover:bg-white font-medium text-slate-600"
-                    >
-                      تسجيل الدخول
-                    </button>
-                    <button
-                      @click="router.push('/register')"
-                      class="w-full text-right p-3 rounded-xl hover:bg-white font-medium text-slate-600"
-                    >
-                      تسجيل جديد
-                    </button>
-                  </template>
+                  </div>
                 </div>
               </div>
 
-              <div
-                class="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 mt-3"
-              >
-                <button
-                  @click="restaurantOpen = !restaurantOpen"
-                  class="w-full flex items-center justify-between p-4 font-bold text-slate-800"
-                >
-                  <div class="flex items-center gap-4">
-                    <Utensils class="w-5 h-5 text-emerald-500" /> المطاعم
-                  </div>
-                  <ChevronDown
-                    :class="[
-                      'w-4 h-4 transition-transform',
-                      restaurantOpen ? 'rotate-180' : '',
-                    ]"
-                  />
-                </button>
-                <div v-if="restaurantOpen" class="bg-slate-50/50 p-2 space-y-1">
-                  <template
-                    v-if="auth.isAuthenticated && auth.type === 'restaurant'"
-                  >
-                    <button
-                      @click="router.push('/restaurant/dashboard')"
-                      class="w-full text-right p-3 rounded-xl hover:bg-white font-medium text-slate-600"
-                    >
-                      لوحة التحكم
-                    </button>
-                    <button
-                      @click="handleLogout"
-                      class="w-full text-right p-3 rounded-xl hover:bg-white font-bold text-red-500"
-                    >
-                      تسجيل الخروج
-                    </button>
-                  </template>
-                  <template v-else>
-                    <button
-                      @click="router.push('/restaurant')"
-                      class="w-full text-right p-3 rounded-xl hover:bg-white font-medium text-slate-600"
-                    >
-                      تسجيل دخول مطعم
-                    </button>
-                    <button
-                      @click="router.push('/restaurant/register')"
-                      class="w-full text-right p-3 rounded-xl hover:bg-white font-medium text-slate-600"
-                    >
-                      تسجيل مطعم جديد
-                    </button>
-                  </template>
+              <nav class="flex-1 p-4 space-y-1">
+                <div class="sm:hidden mb-4">
+                  <CreateOrders class="w-full justify-start" />
+                  <Separator class="my-4" />
                 </div>
-              </div>
-            </div>
 
-            <div
-              v-if="auth.isAuthenticated"
-              class="p-4 bg-white border-t border-slate-100"
-            >
-              <div class="flex items-center gap-3 p-2 bg-slate-50 rounded-2xl">
-                <div class="bg-slate-200 p-2 rounded-xl">
-                  <UserCircle class="w-6 h-6 text-slate-600" />
-                </div>
-                <div class="flex-1 overflow-hidden">
-                  <p class="font-bold text-slate-900 truncate">أهلاً بك</p>
-                  <p class="text-xs text-slate-500 truncate capitalize">
-                    {{ auth.type }} Account
-                  </p>
-                </div>
+                <Button
+                  v-for="item in menuItems"
+                  :key="item.path"
+                  variant="ghost"
+                  class="w-full justify-start gap-3 h-11 px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-all"
+                  @click="
+                    router.push(item.path);
+                    isDrawerOpen = false;
+                  "
+                >
+                  <component
+                    :is="item.icon"
+                    class="h-4 w-4 text-muted-foreground"
+                  />
+                  {{ item.label }}
+                </Button>
+
                 <Button
                   variant="ghost"
-                  size="icon"
+                  class="w-full justify-start gap-3 h-11 px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-all"
+                  @click="
+                    showSupportDialog = true;
+                    isDrawerOpen = false;
+                  "
+                >
+                  <MessageCircle class="h-4 w-4 text-muted-foreground" />
+                  <span>الدعم الفني</span>
+                </Button>
+              </nav>
+
+              <div class="p-4 border-t border-border mt-auto">
+                <Button
+                  variant="ghost"
+                  class="w-full justify-start gap-3 h-11 px-3 text-sm font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
                   @click="handleLogout"
-                  class="text-red-500"
-                  ><LogOut class="w-5 h-5"
-                /></Button>
+                >
+                  <LogOut class="h-4 w-4" />
+                  <span>تسجيل الخروج</span>
+                </Button>
               </div>
             </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+          </SheetContent>
+        </Sheet>
+      </div>
     </div>
   </header>
+
+  <SupportDialog v-model:open="showSupportDialog" />
 </template>

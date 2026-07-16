@@ -176,9 +176,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 flex flex-col font-sans" dir="rtl">
+  <div class="min-h-screen bg-background flex flex-col font-sans" dir="rtl">
     <div
-      class="p-4 flex items-center gap-4 bg-white border-b border-slate-100 sticky top-0 z-20"
+      class="p-4 flex items-center gap-4 bg-background border-b border-border sticky top-0 z-20"
     >
       <Button
         variant="ghost"
@@ -186,52 +186,52 @@ onMounted(async () => {
         @click="router.back()"
         class="rounded-full"
       >
-        <ArrowRight class="w-6 h-6 text-slate-800" />
+        <ArrowRight class="w-6 h-6 text-foreground" />
       </Button>
-      <h1 class="text-xl font-black text-slate-900">حساب سائق جديد</h1>
+      <h1 class="text-xl font-black text-foreground">حساب سائق جديد</h1>
     </div>
 
     <form @submit.prevent="handleSubmit" class="p-5 space-y-6 pb-24">
       <div class="space-y-4">
         <div class="flex items-center gap-2 mb-2 px-1">
-          <User class="w-5 h-5 text-red-600" />
-          <h2 class="font-black text-slate-800">المعلومات الشخصية</h2>
+          <User class="w-5 h-5 text-primary" />
+          <h2 class="font-black text-foreground">المعلومات الشخصية</h2>
         </div>
 
         <div
-          class="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-4"
+          class="bg-card rounded-3xl p-5 shadow-sm border border-border space-y-4"
         >
           <div class="space-y-1.5">
-            <Label class="text-slate-500 mr-1 text-xs font-bold"
+            <Label class="text-muted-foreground mr-1 text-xs font-bold"
               >الاسم الكامل (كما في البطاقة)</Label
             >
             <Input
               v-model="form.full_name"
               required
-              class="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold"
+              class="h-12 rounded-xl bg-muted border-none px-4 font-bold"
             />
           </div>
 
           <div class="space-y-1.5">
-            <Label class="text-slate-500 mr-1 text-xs font-bold"
+            <Label class="text-muted-foreground mr-1 text-xs font-bold"
               >رقم الهاتف</Label
             >
             <Input
               v-model="form.phone"
               required
               type="tel"
-              class="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold"
+              class="h-12 rounded-xl bg-muted border-none px-4 font-bold"
               dir="ltr"
             />
           </div>
 
           <div class="space-y-1.5">
-            <Label class="text-slate-500 mr-1 text-xs font-bold">الفرع</Label>
+            <Label class="text-muted-foreground mr-1 text-xs font-bold">الفرع</Label>
             <div class="relative">
               <select
                 v-model="selectedBranch"
                 required
-                class="w-full h-12 bg-slate-50 border-none rounded-xl px-4 font-bold text-sm appearance-none outline-none focus:ring-2 ring-red-500/20"
+                class="w-full h-12 bg-muted border-none rounded-xl px-4 font-bold text-sm appearance-none outline-none focus:ring-2 ring-primary/20"
                 @change="form.city = ''"
               >
                 <option disabled value="">اختر الفرع</option>
@@ -244,18 +244,18 @@ onMounted(async () => {
                 </option>
               </select>
               <MapPin
-                class="absolute left-4 top-3.5 w-5 h-5 text-slate-400 pointer-events-none"
+                class="absolute left-4 top-3.5 w-5 h-5 text-muted-foreground pointer-events-none"
               />
             </div>
           </div>
 
           <div class="space-y-1.5" v-if="selectedBranch">
-            <Label class="text-slate-500 mr-1 text-xs font-bold">المدينة</Label>
+            <Label class="text-muted-foreground mr-1 text-xs font-bold">المدينة</Label>
             <div class="relative">
               <select
                 v-model="form.city"
                 required
-                class="w-full h-12 bg-slate-50 border-none rounded-xl px-4 font-bold text-sm appearance-none outline-none focus:ring-2 ring-red-500/20"
+                class="w-full h-12 bg-muted border-none rounded-xl px-4 font-bold text-sm appearance-none outline-none focus:ring-2 ring-primary/20"
               >
                 <option disabled value="">اختر مدينة</option>
                 <option
@@ -267,19 +267,19 @@ onMounted(async () => {
                 </option>
               </select>
               <MapPin
-                class="absolute left-4 top-3.5 w-5 h-5 text-slate-400 pointer-events-none"
+                class="absolute left-4 top-3.5 w-5 h-5 text-muted-foreground pointer-events-none"
               />
             </div>
           </div>
 
           <div class="space-y-1.5">
-            <Label class="text-slate-500 mr-1 text-xs font-bold"
+            <Label class="text-muted-foreground mr-1 text-xs font-bold"
               >الرقم القومي (14 رقم)</Label
             >
             <Input
               v-model="form.id_number"
               required
-              class="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold font-mono"
+              class="h-12 rounded-xl bg-muted border-none px-4 font-bold font-mono"
             />
           </div>
         </div>
@@ -287,20 +287,20 @@ onMounted(async () => {
 
       <div class="space-y-4">
         <div class="flex items-center gap-2 mb-2 px-1">
-          <Bike class="w-5 h-5 text-blue-600" />
-          <h2 class="font-black text-slate-800">بيانات المركبة</h2>
+          <Bike class="w-5 h-5 text-primary" />
+          <h2 class="font-black text-foreground">بيانات المركبة</h2>
         </div>
         <div
-          class="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-4"
+          class="bg-card rounded-3xl p-5 shadow-sm border border-border space-y-4"
         >
           <div class="space-y-1.5">
-            <Label class="text-slate-500 mr-1 text-xs font-bold"
+            <Label class="text-muted-foreground mr-1 text-xs font-bold"
               >نوع المركبة</Label
             >
             <select
               v-model="form.driver_type"
               required
-              class="w-full h-12 bg-slate-50 border-none rounded-xl px-4 font-bold text-sm"
+              class="w-full h-12 bg-muted border-none rounded-xl px-4 font-bold text-sm"
             >
               <option disabled value="">اختر نوع المركبة</option>
               <option value="موتوسيكل">موتوسيكل</option>
@@ -309,14 +309,14 @@ onMounted(async () => {
             </select>
           </div>
           <div class="space-y-1.5">
-            <Label class="text-slate-500 mr-1 text-xs font-bold"
+            <Label class="text-muted-foreground mr-1 text-xs font-bold"
               >رقم اللوحة</Label
             >
             <Input
               v-model="form.plate_number"
               required
               placeholder="أ ب ج 1 2 3"
-              class="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold text-center"
+              class="h-12 rounded-xl bg-muted border-none px-4 font-bold text-center"
             />
           </div>
         </div>
@@ -324,26 +324,26 @@ onMounted(async () => {
 
       <div class="space-y-4">
         <div class="flex items-center gap-2 mb-2 px-1">
-          <Lock class="w-5 h-5 text-emerald-600" />
-          <h2 class="font-black text-slate-800">أمان الحساب</h2>
+          <Lock class="w-5 h-5 text-primary" />
+          <h2 class="font-black text-foreground">أمان الحساب</h2>
         </div>
-        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-          <Label class="text-slate-500 mr-1 text-xs font-bold"
+        <div class="bg-card rounded-3xl p-5 shadow-sm border border-border">
+          <Label class="text-muted-foreground mr-1 text-xs font-bold"
             >كلمة المرور</Label
           >
           <Input
             v-model="form.password"
             required
             type="password"
-            class="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold"
+            class="h-12 rounded-xl bg-muted border-none px-4 font-bold"
           />
         </div>
       </div>
 
       <div class="space-y-4">
         <div class="flex items-center gap-2 mb-2 px-1">
-          <Camera class="w-5 h-5 text-purple-600" />
-          <h2 class="font-black text-slate-800">رفع المستندات والطلب</h2>
+          <Camera class="w-5 h-5 text-primary" />
+          <h2 class="font-black text-foreground">رفع المستندات والطلب</h2>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -371,8 +371,8 @@ onMounted(async () => {
               class="relative flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-4 transition-all active:scale-95"
               :class="
                 form[key as PhotoField]
-                  ? 'border-emerald-500 bg-emerald-50'
-                  : 'border-slate-200 bg-white'
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border bg-card'
               "
             >
               <input
@@ -385,13 +385,13 @@ onMounted(async () => {
                 v-if="form[key as PhotoField]"
                 class="flex flex-col items-center animate-in zoom-in-75"
               >
-                <CheckCircle2 class="w-6 h-6 text-emerald-600 mb-1" />
+                <CheckCircle2 class="w-6 h-6 text-primary mb-1" />
                 <span
-                  class="text-[10px] font-black text-emerald-700 text-center leading-tight"
+                  class="text-[10px] font-black text-primary text-center leading-tight"
                   >تم الرفع</span
                 >
               </div>
-              <div v-else class="flex flex-col items-center text-slate-400">
+              <div v-else class="flex flex-col items-center text-muted-foreground">
                 <Upload class="w-6 h-6 mb-1 opacity-50" />
                 <span class="text-[10px] font-bold text-center leading-tight">{{
                   label
@@ -403,11 +403,11 @@ onMounted(async () => {
       </div>
 
       <div
-        class="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-lg border-t border-slate-100 z-30"
+        class="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-lg border-t border-border z-30"
       >
         <Button
           type="submit"
-          class="w-full h-14 rounded-2xl bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200 text-lg font-black"
+          class="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 text-primary-foreground text-lg font-black"
           :disabled="loading"
         >
           <Loader2 v-if="loading" class="w-5 h-5 animate-spin ml-2" />
