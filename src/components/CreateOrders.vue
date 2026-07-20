@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/select";
 import { useAuthStore } from "@/stores/auth";
 
+const emit = defineEmits<{ orderCreated: [] }>();
+
 const auth = useAuthStore();
 
 const isCreateOrderOpen = ref(false);
@@ -100,6 +102,7 @@ const handleCreateOrder = async () => {
       headers: { "Content-Type": "multipart/form-data" },
     });
     toast.success("تم إنشاء الطلب بنجاح");
+    emit("orderCreated");
 
     newOrder.value = {
       customerPhone: "+2",

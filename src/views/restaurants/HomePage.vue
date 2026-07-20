@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import EditOrders from "@/components/EditOrders.vue";
 import RestaurantDriverMap from "@/components/RestaurantDriverMap.vue";
+import CreateOrders from "@/components/CreateOrders.vue";
 import { computed, onMounted, ref, watch, onUnmounted } from "vue";
 import { Clock, CheckCircle } from "lucide-vue-next";
 import Header from "@/components/Header.vue";
@@ -223,11 +224,14 @@ const handleCostUpdated = (orderId: number, newCost: number) => {
     </p>
 
     <Card>
-      <CardHeader>
-        <CardTitle>الطلبات الحالية</CardTitle>
-        <CardDescription>
-          تابع الطلبات اللي شغالة دلوقتي وعدّل حالتها
-        </CardDescription>
+      <CardHeader class="flex flex-row items-center justify-between space-y-0">
+        <div>
+          <CardTitle>الطلبات الحالية</CardTitle>
+          <CardDescription>
+            تابع الطلبات اللي شغالة دلوقتي وعدّل حالتها
+          </CardDescription>
+        </div>
+        <CreateOrders @order-created="fetchTodayOrders" />
       </CardHeader>
 
       <CardContent>
