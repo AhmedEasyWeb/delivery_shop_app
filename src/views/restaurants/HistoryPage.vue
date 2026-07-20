@@ -504,7 +504,7 @@ watch(currentPage, async (newPage, oldPage) => {
                     class="flex items-center gap-3 p-3 bg-muted/40 rounded-xl border border-border/30 hover:bg-muted/60 transition-colors"
                   >
                     <div
-                      class="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shadow-sm"
+                      class="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shadow-sm"
                     >
                       <Phone class="w-4 h-4" />
                     </div>
@@ -782,7 +782,8 @@ watch(currentPage, async (newPage, oldPage) => {
                         "
                         class="inline-flex text-[9px] text-emerald-600 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded-full mt-1"
                       >
-                        ⏱ {{ diffMins(order.picked_up_at, order.delivered_at) }}
+                        ⏱
+                        {{ diffMins(order.picked_up_at, order.delivered_at) }}
                       </span>
                     </div>
                   </div>
@@ -926,7 +927,8 @@ watch(currentPage, async (newPage, oldPage) => {
                         "
                         class="text-[9px] text-emerald-600 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded-full mt-1"
                       >
-                        ⏱ {{ diffMins(order.picked_up_at, order.delivered_at) }}
+                        ⏱
+                        {{ diffMins(order.picked_up_at, order.delivered_at) }}
                       </span>
                     </div>
                   </div>
